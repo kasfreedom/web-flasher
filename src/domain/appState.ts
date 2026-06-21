@@ -127,9 +127,26 @@ export function reducer(state: AppState, action: AppAction): AppState {
 }
 
 export function selectCanConnect(state: AppState): boolean {
-  return state.status === "idle" || state.status === "failed";
+  return state.status === "idle" || (state.status === "failed" && state.chipName === null);
 }
 
 export function selectCanFlash(state: AppState): boolean {
-  return state.status === "connected" && state.firmware !== null;
+  return (
+    state.firmware !== null &&
+    state.chipName !== null &&
+    (state.status === "connected" || state.status === "success" || state.status === "failed")
+  );
+}
+
+export function selectFlashButtonLabel(state: AppState): string {
+  switch (state.status) {
+    case "flashing":
+      return "Flashing...";
+    case "success":
+      return "Flash again";
+    case "failed":
+      return state.chipName === null ? "Flash" : "Try again";
+    default:
+      return "Flash";
+  }
 }

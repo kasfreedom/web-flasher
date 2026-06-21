@@ -102,4 +102,62 @@ describe("AppController", () => {
     expect(document.querySelector("#progressLabel")?.textContent).toBe("100%");
     expect(document.querySelector("#stateLabel")?.textContent).toBe("Success");
   });
+
+  it("changes the flash button to Flash again after success and allows another flash", async () => {
+    const flasher = new FakeFlasher();
+    new AppController({
+      root: document,
+      flasher,
+      serialSupported: true,
+      secureContext: true,
+    }).start();
+
+    (document.querySelector("#connectButton") as HTMLButtonElement).click();
+    await Promise.resolve();
+
+    const input = document.querySelector("#firmwareInput") as HTMLInputElement;
+    setInputFile(input, new File([new Uint8Array([1, 2, 3])], "kairo-demo.bin"));
+    input.dispatchEvent(new Event("change"));
+    await waitForAsyncDomWork();
+
+    const flashButton = document.querySelector("#flashButton") as HTMLButtonElement;
+    flashButton.click();
+    await waitForAsyncDomWork();
+
+    expect(flashButton.textContent).toBe("Flash again");
+    expect(flashButton.disabled).toBe(false);
+
+    flashButton.click();
+    await waitForAsyncDomWork();
+
+    expect(flasher.flash).toHaveBeenCalledTimes(2);
+  });
+
+  it("changes the flash button to Try again after a flash failure", async () => {
+    const flasher = new FakeFlasher();
+    flasher.flash.mockRejectedValueOnce(new Error("flash failed"));
+    new AppController({
+      root: document,
+      flasher,
+      serialSupported: true,
+      secureContext: true,
+    }).start();
+
+    (document.querySelector("#connectButton") as HTMLButtonElement).click();
+    await Promise.resolve();
+
+    const input = document.querySelector("#firmwareInput") as HTMLInputElement;
+    setInputFile(input, new File([new Uint8Array([1, 2, 3])], "kairo-demo.bin"));
+    input.dispatchEvent(new Event("change"));
+    await waitForAsyncDomWork();
+
+    const flashButton = document.querySelector("#flashButton") as HTMLButtonElement;
+    flashButton.click();
+    await waitForAsyncDomWork();
+
+    expect(document.querySelector("#stateLabel")?.textContent).toBe("Failed");
+    expect(flashButton.textContent).toBe("Try again");
+    expect(flashButton.disabled).toBe(false);
+    expect((document.querySelector("#connectButton") as HTMLButtonElement).disabled).toBe(true);
+  });
 });

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createInitialState, reducer, selectCanConnect, selectCanFlash } from "./appState";
+import {
+  createInitialState,
+  reducer,
+  selectCanConnect,
+  selectCanFlash,
+  selectFlashButtonLabel,
+} from "./appState";
 
 describe("appState", () => {
   it("starts unsupported when Web Serial is unavailable", () => {
@@ -51,6 +57,44 @@ describe("appState", () => {
 
     expect(failed.status).toBe("failed");
     expect(failed.errorCode).toBe("flash-failed");
+    expect(selectCanFlash(failed)).toBe(false);
+  });
+
+  it("allows flashing again after success when device and firmware remain selected", () => {
+    const idle = createInitialState({ serialSupported: true, secureContext: true });
+    const connected = reducer(idle, { type: "connected", chipName: "ESP32-S3" });
+    const selected = reducer(connected, {
+      type: "firmware-selected",
+      fileName: "kairo-demo.bin",
+      sizeBytes: 4,
+    });
+    const success = reducer(selected, { type: "success" });
+
+    expect(selectCanConnect(success)).toBe(false);
+    expect(selectCanFlash(success)).toBe(true);
+    expect(selectFlashButtonLabel(success)).toBe("Flash again");
+  });
+
+  it("allows retry after a flash failure when device and firmware remain selected", () => {
+    const idle = createInitialState({ serialSupported: true, secureContext: true });
+    const connected = reducer(idle, { type: "connected", chipName: "ESP32-S3" });
+    const selected = reducer(connected, {
+      type: "firmware-selected",
+      fileName: "kairo-demo.bin",
+      sizeBytes: 4,
+    });
+    const failed = reducer(selected, { type: "failed", errorCode: "flash-failed" });
+
+    expect(selectCanConnect(failed)).toBe(false);
+    expect(selectCanFlash(failed)).toBe(true);
+    expect(selectFlashButtonLabel(failed)).toBe("Try again");
+  });
+
+  it("allows reconnect after a connection failure before any device is connected", () => {
+    const idle = createInitialState({ serialSupported: true, secureContext: true });
+    const failed = reducer(idle, { type: "failed", errorCode: "serial-connection-failed" });
+
+    expect(selectCanConnect(failed)).toBe(true);
     expect(selectCanFlash(failed)).toBe(false);
   });
 });

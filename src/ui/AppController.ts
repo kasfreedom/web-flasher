@@ -3,6 +3,7 @@ import {
   reducer,
   selectCanConnect,
   selectCanFlash,
+  selectFlashButtonLabel,
   type AppAction,
   type AppState,
 } from "../domain/appState";
@@ -128,6 +129,7 @@ export class AppController {
     this.nextStepMessage.textContent = this.state.nextStep ?? "";
 
     this.connectButton.disabled = !selectCanConnect(this.state);
+    this.flashButton.textContent = selectFlashButtonLabel(this.state);
     this.flashButton.disabled = !selectCanFlash(this.state);
     this.firmwareInput.disabled =
       this.state.status === "unsupported" || this.state.status === "flashing";
