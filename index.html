@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Flasher</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="panel">
+        <header class="header">
+          <p class="eyebrow">ESP32-S3 firmware installer</p>
+          <h1>Web Flasher</h1>
+          <p class="summary">
+            Select a merged firmware .bin file from this computer and flash it over USB.
+          </p>
+        </header>
+
+        <div id="supportMessage" class="notice" role="status"></div>
+
+        <section class="controls" aria-label="Flashing controls">
+          <button id="connectButton" type="button">Connect device</button>
+
+          <label class="file-picker">
+            <span>Firmware .bin</span>
+            <input id="firmwareInput" type="file" accept=".bin,application/octet-stream" />
+          </label>
+
+          <button id="flashButton" type="button">Flash</button>
+        </section>
+
+        <section class="status-grid" aria-label="Status">
+          <div>
+            <span class="label">State</span>
+            <strong id="stateLabel">Idle</strong>
+          </div>
+          <div>
+            <span class="label">Firmware</span>
+            <strong id="firmwareLabel">No file selected</strong>
+          </div>
+        </section>
+
+        <section class="progress-section" aria-label="Flash progress">
+          <div class="progress-header">
+            <span>Progress</span>
+            <span id="progressLabel">0%</span>
+          </div>
+          <progress id="progressBar" max="100" value="0"></progress>
+        </section>
+
+        <section class="message-section" aria-live="polite">
+          <p id="errorMessage" class="error-message"></p>
+          <p id="nextStepMessage" class="next-step"></p>
+        </section>
+
+        <section class="log-section" aria-label="Logs">
+          <div class="log-header">
+            <h2>Logs</h2>
+            <button id="clearLogsButton" type="button">Clear</button>
+          </div>
+          <pre id="logOutput"></pre>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

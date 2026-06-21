@@ -1,0 +1,150 @@
+:root {
+  color: #17202a;
+  background: #f6f7f9;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 16px;
+  color: #ffffff;
+  background: #176b87;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.app-shell {
+  width: min(960px, calc(100% - 32px));
+  margin: 32px auto;
+}
+
+.panel {
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+  border: 1px solid #d7dde5;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.header {
+  display: grid;
+  gap: 8px;
+}
+
+.eyebrow,
+.summary,
+.label,
+.next-step {
+  margin: 0;
+  color: #5b6573;
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+h2 {
+  font-size: 1rem;
+}
+
+.notice,
+.error-message {
+  margin: 0;
+  min-height: 24px;
+}
+
+.error-message {
+  color: #9f1d35;
+}
+
+.controls,
+.status-grid,
+.progress-header,
+.log-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.controls,
+.status-grid {
+  flex-wrap: wrap;
+}
+
+.file-picker {
+  display: grid;
+  gap: 6px;
+}
+
+.status-grid > div {
+  min-width: 180px;
+}
+
+.progress-section {
+  display: grid;
+  gap: 8px;
+}
+
+.progress-header,
+.log-header {
+  justify-content: space-between;
+}
+
+progress {
+  width: 100%;
+  height: 16px;
+}
+
+#logOutput {
+  min-height: 180px;
+  max-height: 320px;
+  overflow: auto;
+  margin: 0;
+  padding: 16px;
+  border-radius: 6px;
+  color: #d8dee9;
+  background: #1f2933;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    width: min(100% - 20px, 960px);
+    margin: 10px auto;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

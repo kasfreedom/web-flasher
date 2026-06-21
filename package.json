@@ -1,0 +1,22 @@
+{
+  "name": "web-flasher",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "esptool-js": "^0.6.0"
+  },
+  "devDependencies": {
+    "@types/w3c-web-serial": "^1.0.8",
+    "jsdom": "^29.1.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
+  }
+}
