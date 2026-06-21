@@ -1,7 +1,13 @@
 import "./styles.css";
+import { EsptoolFlasherClient } from "./flasher/EsptoolFlasherClient";
+import { AppController } from "./ui/AppController";
 
-const supportMessage = document.querySelector<HTMLDivElement>("#supportMessage");
+const serialSupported = "serial" in navigator;
+const secureContext = window.isSecureContext;
 
-if (supportMessage) {
-  supportMessage.textContent = "Web Flasher is loading.";
-}
+new AppController({
+  root: document,
+  flasher: new EsptoolFlasherClient(),
+  serialSupported,
+  secureContext,
+}).start();
