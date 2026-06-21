@@ -61,6 +61,12 @@ export class AppController {
       return;
     }
 
+    if (!file) {
+      this.firmwareImage = null;
+      this.dispatch({ type: "failed", errorCode: "missing-firmware" });
+      return;
+    }
+
     this.firmwareImage = await readFirmwareFile(file);
     this.dispatch({
       type: "firmware-selected",
