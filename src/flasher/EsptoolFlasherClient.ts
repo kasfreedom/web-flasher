@@ -4,6 +4,7 @@ import {
   type IEspLoaderTerminal,
   Transport,
 } from "esptool-js";
+import { calculateMd5Hex } from "../domain/md5Hash";
 import type { FlashFirmwareInput, FlasherClient } from "./FlasherClient";
 
 const DEFAULT_BAUDRATE = 115200;
@@ -48,6 +49,7 @@ export class EsptoolFlasherClient implements FlasherClient {
       flashSize: DEFAULT_FLASH_SIZE,
       eraseAll: false,
       compress: true,
+      calculateMD5Hash: calculateMd5Hex,
       reportProgress: (fileIndex: number, writtenBytes: number, totalBytes: number) => {
         input.onProgress({
           fileIndex,
@@ -59,6 +61,7 @@ export class EsptoolFlasherClient implements FlasherClient {
     };
 
     input.onLog(`Writing firmware at 0x${input.offset.toString(16)}.`);
+    input.onLog("Verifying flash checksum after write.");
     await this.loader.writeFlash(options);
   }
 
