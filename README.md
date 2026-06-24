@@ -2,6 +2,8 @@
 
 Web Flasher is a static browser tool for flashing a merged ESP32-S3 firmware `.bin` file over USB.
 
+[Open Web Flasher](https://kasfreedom.github.io/web-flasher/)
+
 The selected firmware file stays on your computer. The browser reads it locally and writes it to the device using Web Serial. There is no firmware upload backend in V1.
 
 ## Requirements
@@ -17,7 +19,7 @@ Safari, iPhone, and Firefox are not primary targets for this version because Web
 
 ## Flashing
 
-1. Open Web Flasher in desktop Chrome or Edge.
+1. Open [Web Flasher](https://kasfreedom.github.io/web-flasher/) in desktop Chrome or Edge.
 2. Connect the ESP32-S3 over USB.
 3. Click **Connect device**.
 4. Select the ESP32-S3 serial port in the browser picker.
