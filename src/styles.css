@@ -83,11 +83,16 @@ button svg,
 .file-picker svg,
 .summary-list svg,
 .brand-icon svg,
-.row-icon svg,
 .log-header svg {
   width: 18px;
   height: 18px;
   stroke-width: 2;
+}
+
+.row-icon svg {
+  width: 28px;
+  height: 28px;
+  stroke-width: 1.9;
 }
 
 .app-shell {
