@@ -7,59 +7,168 @@
   </head>
   <body>
     <main class="app-shell">
-      <section class="panel">
-        <header class="header">
-          <p class="eyebrow">ESP32-S3 firmware installer</p>
-          <h1>Web Flasher</h1>
-          <p class="summary">
-            Select a merged firmware .bin file from this computer and flash it over USB.
-          </p>
-        </header>
-
-        <div id="supportMessage" class="notice" role="status"></div>
-
-        <section class="controls" aria-label="Flashing controls">
-          <button id="connectButton" type="button">Connect device</button>
-
-          <label class="file-picker">
-            <span>Firmware .bin</span>
-            <input id="firmwareInput" type="file" accept=".bin,application/octet-stream" />
-          </label>
-
-          <button id="flashButton" type="button">Flash</button>
-        </section>
-
-        <section class="status-grid" aria-label="Status">
+      <header class="app-header">
+        <div class="brand-block">
+          <span class="brand-icon" aria-hidden="true" data-lucide="cpu"></span>
           <div>
-            <span class="label">State</span>
+            <h1>Web Flasher</h1>
+            <p>Browser-based ESP32-S3 firmware flashing tool</p>
+          </div>
+        </div>
+        <div class="header-meta">
+          <span id="supportMessage" class="notice" role="status"></span>
+          <a href="https://github.com/kasfreedom/web-flasher" rel="noreferrer" target="_blank">
+            GitHub
+          </a>
+        </div>
+      </header>
+
+      <section class="step-strip" aria-label="Flashing workflow">
+        <article class="step-item" data-step="browser">
+          <span class="step-number">1</span>
+          <div>
+            <div class="step-title-row">
+              <h2>Check browser</h2>
+              <span id="browserStatusLabel" class="status-pill">Supported</span>
+            </div>
+            <p>Web Serial support</p>
+          </div>
+        </article>
+        <article class="step-item" data-step="connect">
+          <span class="step-number">2</span>
+          <div>
+            <div class="step-title-row">
+              <h2>Connect device</h2>
+              <span id="connectStepLabel" class="status-pill status-muted">Not connected</span>
+            </div>
+            <p>Choose the ESP32-S3 serial port</p>
+          </div>
+        </article>
+        <article class="step-item" data-step="firmware">
+          <span class="step-number">3</span>
+          <div>
+            <div class="step-title-row">
+              <h2>Select firmware</h2>
+              <span id="firmwareStepLabel" class="status-pill status-muted">No file</span>
+            </div>
+            <p id="firmwareLabel">No file selected</p>
+          </div>
+        </article>
+        <article class="step-item" data-step="flash">
+          <span class="step-number">4</span>
+          <div>
+            <div class="step-title-row">
+              <h2>Flash</h2>
+              <span id="flashStepLabel" class="status-pill status-muted">Waiting</span>
+            </div>
+            <p>Write, verify, then reset</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <section class="workflow-panel" aria-label="Flash workflow">
+          <div class="section-heading">
+            <span>Flash workflow</span>
             <strong id="stateLabel">Idle</strong>
           </div>
+
+          <div class="workflow-row">
+            <span class="row-icon" aria-hidden="true" data-lucide="usb"></span>
+            <div class="row-body">
+              <h2>1. Connect device</h2>
+              <p>Connect the ESP32-S3 over USB, then select its serial port.</p>
+            </div>
+            <button id="connectButton" type="button">
+              <span data-lucide="plug-zap"></span>
+              Connect device
+            </button>
+          </div>
+
+          <div class="workflow-row">
+            <span class="row-icon" aria-hidden="true" data-lucide="file-up"></span>
+            <div class="row-body">
+              <h2>2. Choose firmware (.bin)</h2>
+              <p>Use a merged ESP32-S3 firmware binary from this computer.</p>
+            </div>
+            <label class="file-picker">
+              <span>Choose firmware</span>
+              <input id="firmwareInput" type="file" accept=".bin,application/octet-stream" />
+            </label>
+          </div>
+
+          <div class="workflow-row">
+            <span class="row-icon" aria-hidden="true" data-lucide="zap"></span>
+            <div class="row-body">
+              <h2>3. Flash at offset 0x0</h2>
+              <p>Web Flasher writes the selected image and verifies the checksum.</p>
+            </div>
+            <button id="flashButton" class="primary-action" type="button">
+              <span data-lucide="zap"></span>
+              Flash
+            </button>
+          </div>
+
+          <div class="progress-block" aria-label="Flash progress">
+            <div class="progress-header">
+              <span>Progress</span>
+              <span id="progressLabel">0%</span>
+            </div>
+            <progress id="progressBar" max="100" value="0"></progress>
+          </div>
+
+          <section class="message-section" aria-live="polite">
+            <p id="errorMessage" class="error-message"></p>
+            <p id="nextStepMessage" class="next-step"></p>
+          </section>
+        </section>
+
+        <aside class="summary-panel" aria-label="Session summary">
+          <div class="section-heading">
+            <span>Session summary</span>
+          </div>
+
+          <dl class="summary-list">
+            <div>
+              <dt><span data-lucide="cpu"></span> Device</dt>
+              <dd id="deviceSummary">Not connected</dd>
+            </div>
+            <div>
+              <dt><span data-lucide="file"></span> Firmware</dt>
+              <dd id="firmwareSummary">No file selected</dd>
+            </div>
+            <div>
+              <dt><span data-lucide="map-pin"></span> Offset</dt>
+              <dd id="offsetSummary">0x0</dd>
+            </div>
+            <div>
+              <dt><span data-lucide="shield-check"></span> Checksum</dt>
+              <dd id="checksumSummary">Waiting</dd>
+            </div>
+            <div>
+              <dt><span data-lucide="lock-keyhole"></span> Privacy</dt>
+              <dd id="privacySummary">File stays local</dd>
+            </div>
+            <div>
+              <dt><span data-lucide="globe-2"></span> Browser</dt>
+              <dd id="browserSummary">Web Serial supported</dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+
+      <section class="log-section" aria-label="Logs">
+        <div class="log-header">
           <div>
-            <span class="label">Firmware</span>
-            <strong id="firmwareLabel">No file selected</strong>
+            <span data-lucide="terminal"></span>
+            <h2>Log console</h2>
           </div>
-        </section>
-
-        <section class="progress-section" aria-label="Flash progress">
-          <div class="progress-header">
-            <span>Progress</span>
-            <span id="progressLabel">0%</span>
-          </div>
-          <progress id="progressBar" max="100" value="0"></progress>
-        </section>
-
-        <section class="message-section" aria-live="polite">
-          <p id="errorMessage" class="error-message"></p>
-          <p id="nextStepMessage" class="next-step"></p>
-        </section>
-
-        <section class="log-section" aria-label="Logs">
-          <div class="log-header">
-            <h2>Logs</h2>
-            <button id="clearLogsButton" type="button">Clear</button>
-          </div>
-          <pre id="logOutput"></pre>
-        </section>
+          <button id="clearLogsButton" class="secondary-action" type="button">
+            <span data-lucide="trash-2"></span>
+            Clear logs
+          </button>
+        </div>
+        <pre id="logOutput"></pre>
       </section>
     </main>
     <script type="module" src="/src/main.ts"></script>

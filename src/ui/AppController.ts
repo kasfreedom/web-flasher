@@ -112,15 +112,17 @@ export class AppController {
   }
 
   private render(): void {
+    const browserSupported = this.state.status !== "unsupported";
     this.supportMessage.textContent =
       this.state.status === "unsupported" && this.state.errorCode
         ? mapErrorToMessage(this.state.errorCode)
-        : "Ready. Connect the device, choose a firmware .bin, then flash.";
+        : "Web Serial is supported";
 
     this.stateLabel.textContent = labelForStatus(this.state.status);
-    this.firmwareLabel.textContent = this.state.firmware
-      ? `${this.state.firmware.fileName} (${this.state.firmware.sizeBytes} bytes)`
+    const firmwareText = this.state.firmware
+      ? `${this.state.firmware.fileName} (${formatBytes(this.state.firmware.sizeBytes)})`
       : "No file selected";
+    this.firmwareLabel.textContent = firmwareText;
     this.progressBar.value = this.state.progressPercentage;
     this.progressLabel.textContent = `${this.state.progressPercentage}%`;
     this.errorMessage.textContent = this.state.errorCode
@@ -128,11 +130,33 @@ export class AppController {
       : "";
     this.nextStepMessage.textContent = this.state.nextStep ?? "";
 
+    this.browserStatusLabel.textContent = browserSupported ? "Supported" : "Unsupported";
+    this.connectStepLabel.textContent = this.state.chipName ? "Connected" : "Not connected";
+    this.firmwareStepLabel.textContent = this.state.firmware ? "Selected" : "No file";
+    this.flashStepLabel.textContent = labelForFlashStep(this.state);
+    this.deviceSummary.textContent = this.state.chipName ?? "Not connected";
+    this.firmwareSummary.textContent = firmwareText;
+    this.offsetSummary.textContent = "0x0";
+    this.checksumSummary.textContent = labelForChecksum(this.state);
+    this.privacySummary.textContent = "File stays local";
+    this.browserSummary.textContent = browserSupported
+      ? "Web Serial supported"
+      : "Use desktop Chrome or Edge";
+
+    this.setStatusClass(this.browserStatusLabel, browserSupported ? "success" : "danger");
+    this.setStatusClass(this.connectStepLabel, this.state.chipName ? "success" : "muted");
+    this.setStatusClass(this.firmwareStepLabel, this.state.firmware ? "success" : "muted");
+    this.setStatusClass(this.flashStepLabel, statusToneForFlash(this.state));
+
     this.connectButton.disabled = !selectCanConnect(this.state);
     this.flashButton.textContent = selectFlashButtonLabel(this.state);
     this.flashButton.disabled = !selectCanFlash(this.state);
     this.firmwareInput.disabled =
       this.state.status === "unsupported" || this.state.status === "flashing";
+  }
+
+  private setStatusClass(element: HTMLElement, tone: "success" | "warning" | "danger" | "muted"): void {
+    element.className = `status-pill status-${tone}`;
   }
 
   private get supportMessage(): HTMLDivElement {
@@ -157,6 +181,46 @@ export class AppController {
 
   private get firmwareLabel(): HTMLElement {
     return this.required<HTMLElement>("#firmwareLabel");
+  }
+
+  private get browserStatusLabel(): HTMLElement {
+    return this.required<HTMLElement>("#browserStatusLabel");
+  }
+
+  private get connectStepLabel(): HTMLElement {
+    return this.required<HTMLElement>("#connectStepLabel");
+  }
+
+  private get firmwareStepLabel(): HTMLElement {
+    return this.required<HTMLElement>("#firmwareStepLabel");
+  }
+
+  private get flashStepLabel(): HTMLElement {
+    return this.required<HTMLElement>("#flashStepLabel");
+  }
+
+  private get deviceSummary(): HTMLElement {
+    return this.required<HTMLElement>("#deviceSummary");
+  }
+
+  private get firmwareSummary(): HTMLElement {
+    return this.required<HTMLElement>("#firmwareSummary");
+  }
+
+  private get offsetSummary(): HTMLElement {
+    return this.required<HTMLElement>("#offsetSummary");
+  }
+
+  private get checksumSummary(): HTMLElement {
+    return this.required<HTMLElement>("#checksumSummary");
+  }
+
+  private get privacySummary(): HTMLElement {
+    return this.required<HTMLElement>("#privacySummary");
+  }
+
+  private get browserSummary(): HTMLElement {
+    return this.required<HTMLElement>("#browserSummary");
   }
 
   private get progressLabel(): HTMLElement {
@@ -191,6 +255,57 @@ export class AppController {
     }
 
     return element;
+  }
+}
+
+function formatBytes(sizeBytes: number): string {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} bytes`;
+  }
+
+  if (sizeBytes < 1024 * 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function labelForFlashStep(state: AppState): string {
+  switch (state.status) {
+    case "flashing":
+      return "Writing";
+    case "success":
+      return "Verified";
+    case "failed":
+      return "Failed";
+    default:
+      return selectCanFlash(state) ? "Ready" : "Waiting";
+  }
+}
+
+function labelForChecksum(state: AppState): string {
+  switch (state.status) {
+    case "flashing":
+      return "Verifying";
+    case "success":
+      return "Verified";
+    case "failed":
+      return "Not verified";
+    default:
+      return state.firmware ? "Pending" : "Waiting";
+  }
+}
+
+function statusToneForFlash(state: AppState): "success" | "warning" | "danger" | "muted" {
+  switch (state.status) {
+    case "success":
+      return "success";
+    case "failed":
+      return "danger";
+    case "flashing":
+      return "warning";
+    default:
+      return selectCanFlash(state) ? "success" : "muted";
   }
 }
 

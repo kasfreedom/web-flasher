@@ -17,11 +17,21 @@ class FakeFlasher implements FlasherClient {
 function setupDom(): void {
   document.body.innerHTML = `
     <div id="supportMessage"></div>
+    <span id="browserStatusLabel"></span>
+    <span id="connectStepLabel"></span>
+    <span id="firmwareStepLabel"></span>
+    <span id="flashStepLabel"></span>
     <button id="connectButton" type="button">Connect device</button>
     <input id="firmwareInput" type="file" />
     <button id="flashButton" type="button">Flash</button>
     <strong id="stateLabel"></strong>
     <strong id="firmwareLabel"></strong>
+    <span id="deviceSummary"></span>
+    <span id="firmwareSummary"></span>
+    <span id="offsetSummary"></span>
+    <span id="checksumSummary"></span>
+    <span id="privacySummary"></span>
+    <span id="browserSummary"></span>
     <span id="progressLabel"></span>
     <progress id="progressBar" max="100" value="0"></progress>
     <p id="errorMessage"></p>
@@ -75,6 +85,8 @@ describe("AppController", () => {
 
     expect(flasher.connect).toHaveBeenCalledOnce();
     expect(document.querySelector("#stateLabel")?.textContent).toBe("Connected");
+    expect(document.querySelector("#connectStepLabel")?.textContent).toBe("Connected");
+    expect(document.querySelector("#deviceSummary")?.textContent).toBe("ESP32-S3");
   });
 
   it("selects firmware and flashes at offset zero", async () => {
@@ -101,6 +113,43 @@ describe("AppController", () => {
     expect(flasher.flashInput?.offset).toBe(0x0);
     expect(document.querySelector("#progressLabel")?.textContent).toBe("100%");
     expect(document.querySelector("#stateLabel")?.textContent).toBe("Success");
+    expect(document.querySelector("#flashStepLabel")?.textContent).toBe("Verified");
+    expect(document.querySelector("#checksumSummary")?.textContent).toBe("Verified");
+  });
+
+  it("renders guided step and session defaults before connecting", () => {
+    new AppController({
+      root: document,
+      flasher: new FakeFlasher(),
+      serialSupported: true,
+      secureContext: true,
+    }).start();
+
+    expect(document.querySelector("#browserStatusLabel")?.textContent).toBe("Supported");
+    expect(document.querySelector("#connectStepLabel")?.textContent).toBe("Not connected");
+    expect(document.querySelector("#firmwareStepLabel")?.textContent).toBe("No file");
+    expect(document.querySelector("#flashStepLabel")?.textContent).toBe("Waiting");
+    expect(document.querySelector("#deviceSummary")?.textContent).toBe("Not connected");
+    expect(document.querySelector("#offsetSummary")?.textContent).toBe("0x0");
+    expect(document.querySelector("#privacySummary")?.textContent).toBe("File stays local");
+    expect(document.querySelector("#browserSummary")?.textContent).toBe("Web Serial supported");
+  });
+
+  it("renders selected firmware in the guided step and session summary", async () => {
+    new AppController({
+      root: document,
+      flasher: new FakeFlasher(),
+      serialSupported: true,
+      secureContext: true,
+    }).start();
+
+    const input = document.querySelector("#firmwareInput") as HTMLInputElement;
+    setInputFile(input, new File([new Uint8Array([1, 2, 3])], "kairo-demo.bin"));
+    input.dispatchEvent(new Event("change"));
+    await waitForAsyncDomWork();
+
+    expect(document.querySelector("#firmwareStepLabel")?.textContent).toBe("Selected");
+    expect(document.querySelector("#firmwareSummary")?.textContent).toBe("kairo-demo.bin (3 bytes)");
   });
 
   it("changes the flash button to Flash again after success and allows another flash", async () => {

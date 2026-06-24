@@ -1,4 +1,19 @@
 import "./styles.css";
+import {
+  Cpu,
+  File,
+  FileUp,
+  Globe2,
+  LockKeyhole,
+  MapPin,
+  PlugZap,
+  ShieldCheck,
+  Terminal,
+  Trash2,
+  Usb,
+  Zap,
+  createIcons,
+} from "lucide";
 import { EsptoolFlasherClient } from "./flasher/EsptoolFlasherClient";
 import { AppController } from "./ui/AppController";
 
@@ -11,3 +26,20 @@ new AppController({
   serialSupported,
   secureContext,
 }).start();
+
+createIcons({
+  icons: {
+    Cpu,
+    File,
+    FileUp,
+    Globe2,
+    LockKeyhole,
+    MapPin,
+    PlugZap,
+    ShieldCheck,
+    Terminal,
+    Trash2,
+    Usb,
+    Zap,
+  },
+});
