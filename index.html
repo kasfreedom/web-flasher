@@ -87,83 +87,102 @@
       </section>
 
       <section class="workspace">
-        <section class="workflow-panel" aria-label="Flash workflow">
-          <div class="section-heading">
-            <span>Flash workflow</span>
-            <strong id="stateLabel">Idle</strong>
-          </div>
-
-          <div class="workflow-row">
-            <span class="row-icon" aria-hidden="true"><span data-lucide="usb"></span></span>
-            <div class="row-body">
-              <h2>1. Connect device</h2>
-              <p>Connect the ESP32-S3 over USB, then select its serial port.</p>
+        <section class="workflow-column" aria-label="Flash and provisioning workflow">
+          <section class="phase-panel phase-install" aria-label="Firmware install">
+            <div class="phase-heading">
+              <div>
+                <span class="phase-kicker">1. Firmware install</span>
+                <h2>Install the common KAIRO firmware</h2>
+              </div>
+              <strong id="stateLabel">Idle</strong>
             </div>
-            <button id="connectButton" type="button">
-              <span data-lucide="plug-zap"></span>
-              Connect device
-            </button>
-          </div>
 
-          <div class="workflow-row">
-            <span class="row-icon" aria-hidden="true"><span data-lucide="file-up"></span></span>
-            <div class="row-body">
-              <h2>2. Choose firmware (.bin)</h2>
-              <p>Use a merged ESP32-S3 firmware binary from this computer.</p>
+            <div class="phase-steps">
+              <div class="workflow-row">
+                <span class="row-icon" aria-hidden="true"><span data-lucide="usb"></span></span>
+                <div class="row-body">
+                  <h3>Connect device</h3>
+                  <p>Select the ESP32-S3 serial port.</p>
+                </div>
+                <button id="connectButton" type="button">
+                  <span data-lucide="plug-zap"></span>
+                  Connect device
+                </button>
+              </div>
+
+              <div class="workflow-row">
+                <span class="row-icon" aria-hidden="true"><span data-lucide="file-up"></span></span>
+                <div class="row-body">
+                  <h3>Choose firmware (.bin)</h3>
+                  <p>Use the merged firmware image.</p>
+                </div>
+                <label class="file-picker">
+                  <span>Choose firmware</span>
+                  <input id="firmwareInput" type="file" accept=".bin,application/octet-stream" />
+                </label>
+              </div>
+
+              <div class="workflow-row">
+                <span class="row-icon" aria-hidden="true"><span data-lucide="zap"></span></span>
+                <div class="row-body">
+                  <h3>Flash firmware</h3>
+                  <p>Write at offset 0x0 and verify.</p>
+                </div>
+                <button id="flashButton" class="primary-action" type="button">
+                  <span data-lucide="zap"></span>
+                  Flash
+                </button>
+              </div>
             </div>
-            <label class="file-picker">
-              <span>Choose firmware</span>
-              <input id="firmwareInput" type="file" accept=".bin,application/octet-stream" />
-            </label>
-          </div>
 
-          <div class="workflow-row">
-            <span class="row-icon" aria-hidden="true"><span data-lucide="zap"></span></span>
-            <div class="row-body">
-              <h2>3. Flash at offset 0x0</h2>
-              <p>Web Flasher writes the selected image and verifies the checksum.</p>
+            <div class="progress-block" aria-label="Flash progress">
+              <div class="progress-header">
+                <span>Firmware progress</span>
+                <span id="progressLabel">0%</span>
+              </div>
+              <progress id="progressBar" max="100" value="0"></progress>
             </div>
-            <button id="flashButton" class="primary-action" type="button">
-              <span data-lucide="zap"></span>
-              Flash
-            </button>
-          </div>
+          </section>
 
-          <div class="workflow-row">
-            <span class="row-icon" aria-hidden="true"><span data-lucide="file-lock"></span></span>
-            <div class="row-body">
-              <h2>4. Choose provisioning bundle (.json)</h2>
-              <p>Select the per-device KAIRO runtime bundle from this computer.</p>
+          <section class="phase-panel phase-provision" aria-label="Runtime provisioning">
+            <div class="phase-heading">
+              <div>
+                <span class="phase-kicker">2. Runtime provisioning</span>
+                <h2>Send per-device config and certificates</h2>
+              </div>
+              <span class="phase-note">After firmware flash</span>
             </div>
-            <label class="file-picker">
-              <span>Choose bundle</span>
-              <input id="provisioningInput" type="file" accept=".json,application/json" />
-            </label>
-          </div>
 
-          <div class="workflow-row">
-            <span class="row-icon" aria-hidden="true"><span data-lucide="send"></span></span>
-            <div class="row-body">
-              <h2>5. Send provisioning bundle</h2>
-              <p>Web Flasher sends the bundle over USB serial, then waits for the device result.</p>
+            <div class="phase-steps">
+              <div class="workflow-row">
+                <span class="row-icon" aria-hidden="true"><span data-lucide="file-lock"></span></span>
+                <div class="row-body">
+                  <h3>Choose bundle (.json)</h3>
+                  <p>Select the KAIRO runtime bundle.</p>
+                </div>
+                <label class="file-picker">
+                  <span>Choose bundle</span>
+                  <input id="provisioningInput" type="file" accept=".json,application/json" />
+                </label>
+              </div>
+
+              <div class="workflow-row">
+                <span class="row-icon" aria-hidden="true"><span data-lucide="send"></span></span>
+                <div class="row-body">
+                  <h3>Send provisioning</h3>
+                  <p>Send over USB serial and wait for the device result.</p>
+                </div>
+                <button id="provisionButton" class="primary-action" type="button">
+                  <span data-lucide="send"></span>
+                  Send provisioning
+                </button>
+              </div>
             </div>
-            <button id="provisionButton" class="primary-action" type="button">
-              <span data-lucide="send"></span>
-              Send provisioning
-            </button>
-          </div>
 
-          <div class="progress-block" aria-label="Flash progress">
-            <div class="progress-header">
-              <span>Progress</span>
-              <span id="progressLabel">0%</span>
-            </div>
-            <progress id="progressBar" max="100" value="0"></progress>
-          </div>
-
-          <section class="message-section" aria-live="polite">
-            <p id="errorMessage" class="error-message"></p>
-            <p id="nextStepMessage" class="next-step"></p>
+            <section class="message-section" aria-live="polite">
+              <p id="errorMessage" class="error-message"></p>
+              <p id="nextStepMessage" class="next-step"></p>
+            </section>
           </section>
         </section>
 
