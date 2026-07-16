@@ -6,6 +6,8 @@ export type AppStatus =
   | "connecting"
   | "connected"
   | "flashing"
+  | "provisioning"
+  | "provisioned"
   | "success"
   | "failed";
 
@@ -16,22 +18,43 @@ export interface AppState {
     fileName: string;
     sizeBytes: number;
   } | null;
+  firmwareFlashed: boolean;
+  provisioning: {
+    fileName: string;
+    sizeBytes: number;
+    deviceId: string;
+    thingName: string;
+    summary: string;
+  } | null;
+  rebootRequired: boolean | null;
   progressPercentage: number;
   logs: string[];
   errorCode: AppErrorCode | null;
+  errorDetail: string | null;
   nextStep: string | null;
 }
 
 export type AppAction =
   | { type: "firmware-selected"; fileName: string; sizeBytes: number }
   | { type: "firmware-cleared" }
+  | {
+      type: "provisioning-selected";
+      fileName: string;
+      sizeBytes: number;
+      deviceId: string;
+      thingName: string;
+      summary: string;
+    }
+  | { type: "provisioning-cleared" }
   | { type: "connecting" }
   | { type: "connected"; chipName: string }
   | { type: "flash-started" }
   | { type: "flash-progress"; percentage: number }
+  | { type: "provisioning-started" }
+  | { type: "provisioning-success"; rebootRequired: boolean }
   | { type: "log"; message: string }
   | { type: "success" }
-  | { type: "failed"; errorCode: AppErrorCode }
+  | { type: "failed"; errorCode: AppErrorCode; errorDetail?: string }
   | { type: "reset" };
 
 export function createInitialState(input: {
@@ -54,9 +77,13 @@ function baseState(status: AppStatus, errorCode: AppErrorCode | null): AppState 
     status,
     chipName: null,
     firmware: null,
+    firmwareFlashed: false,
+    provisioning: null,
+    rebootRequired: null,
     progressPercentage: 0,
     logs: [],
     errorCode,
+    errorDetail: null,
     nextStep: null,
   };
 }
@@ -70,18 +97,41 @@ export function reducer(state: AppState, action: AppAction): AppState {
           fileName: action.fileName,
           sizeBytes: action.sizeBytes,
         },
+        firmwareFlashed: false,
         errorCode: null,
+        errorDetail: null,
       };
     case "firmware-cleared":
       return {
         ...state,
         firmware: null,
+        firmwareFlashed: false,
+      };
+    case "provisioning-selected":
+      return {
+        ...state,
+        provisioning: {
+          fileName: action.fileName,
+          sizeBytes: action.sizeBytes,
+          deviceId: action.deviceId,
+          thingName: action.thingName,
+          summary: action.summary,
+        },
+        errorCode: null,
+        errorDetail: null,
+      };
+    case "provisioning-cleared":
+      return {
+        ...state,
+        provisioning: null,
+        rebootRequired: null,
       };
     case "connecting":
       return {
         ...state,
         status: "connecting",
         errorCode: null,
+        errorDetail: null,
       };
     case "connected":
       return {
@@ -89,18 +139,41 @@ export function reducer(state: AppState, action: AppAction): AppState {
         status: "connected",
         chipName: action.chipName,
         errorCode: null,
+        errorDetail: null,
       };
     case "flash-started":
       return {
         ...state,
         status: "flashing",
         progressPercentage: 0,
+        firmwareFlashed: false,
+        rebootRequired: null,
         errorCode: null,
+        errorDetail: null,
       };
     case "flash-progress":
       return {
         ...state,
         progressPercentage: Math.max(0, Math.min(100, action.percentage)),
+      };
+    case "provisioning-started":
+      return {
+        ...state,
+        status: "provisioning",
+        errorCode: null,
+        errorDetail: null,
+        rebootRequired: null,
+      };
+    case "provisioning-success":
+      return {
+        ...state,
+        status: "provisioned",
+        errorCode: null,
+        errorDetail: null,
+        rebootRequired: action.rebootRequired,
+        nextStep: action.rebootRequired
+          ? "Provisioning finished. Restart or reset the device."
+          : "Provisioning finished.",
       };
     case "log":
       return {
@@ -111,15 +184,18 @@ export function reducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         status: "success",
+        firmwareFlashed: true,
         progressPercentage: 100,
         errorCode: null,
-        nextStep: "Flashing finished. If the device does not restart, press reset.",
+        errorDetail: null,
+        nextStep: "Firmware flashed. Select a provisioning bundle, then send provisioning.",
       };
     case "failed":
       return {
         ...state,
         status: "failed",
         errorCode: action.errorCode,
+        errorDetail: action.errorDetail ?? null,
       };
     case "reset":
       return createInitialState({ serialSupported: true, secureContext: true });
@@ -127,14 +203,34 @@ export function reducer(state: AppState, action: AppAction): AppState {
 }
 
 export function selectCanConnect(state: AppState): boolean {
-  return state.status === "idle" || (state.status === "failed" && state.chipName === null);
+  return (
+    state.status !== "unsupported" &&
+    state.status !== "connecting" &&
+    state.status !== "flashing" &&
+    state.status !== "provisioning"
+  );
 }
 
 export function selectCanFlash(state: AppState): boolean {
   return (
     state.firmware !== null &&
     state.chipName !== null &&
-    (state.status === "connected" || state.status === "success" || state.status === "failed")
+    state.status !== "flashing" &&
+    state.status !== "provisioning" &&
+    state.status !== "unsupported" &&
+    state.status !== "connecting"
+  );
+}
+
+export function selectCanProvision(state: AppState): boolean {
+  return (
+    state.provisioning !== null &&
+    state.chipName !== null &&
+    state.firmwareFlashed &&
+    state.status !== "flashing" &&
+    state.status !== "provisioning" &&
+    state.status !== "unsupported" &&
+    state.status !== "connecting"
   );
 }
 
@@ -148,5 +244,18 @@ export function selectFlashButtonLabel(state: AppState): string {
       return state.chipName === null ? "Flash" : "Try again";
     default:
       return "Flash";
+  }
+}
+
+export function selectProvisionButtonLabel(state: AppState): string {
+  switch (state.status) {
+    case "provisioning":
+      return "Sending...";
+    case "provisioned":
+      return "Send again";
+    case "failed":
+      return state.firmwareFlashed ? "Try provisioning again" : "Send provisioning";
+    default:
+      return "Send provisioning";
   }
 }

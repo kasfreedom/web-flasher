@@ -4,10 +4,16 @@ export type AppErrorCode =
   | "missing-firmware"
   | "invalid-firmware-extension"
   | "empty-firmware"
+  | "missing-provisioning-bundle"
+  | "empty-provisioning-bundle"
+  | "invalid-provisioning-json"
+  | "invalid-provisioning-bundle"
   | "port-selection-cancelled"
   | "serial-connection-failed"
   | "bootloader-unavailable"
   | "flash-failed"
+  | "provisioning-timeout"
+  | "provisioning-failed"
   | "reset-failed"
   | "unknown";
 
@@ -18,6 +24,11 @@ const ERROR_MESSAGES: Record<AppErrorCode, string> = {
   "missing-firmware": "Choose a firmware .bin file from this computer before flashing.",
   "invalid-firmware-extension": "Choose a merged firmware file with a .bin filename.",
   "empty-firmware": "The selected firmware file is empty. Choose a valid merged .bin file.",
+  "missing-provisioning-bundle": "Choose a provisioning JSON bundle from this computer.",
+  "empty-provisioning-bundle": "The selected provisioning bundle is empty.",
+  "invalid-provisioning-json": "The provisioning bundle must be valid JSON.",
+  "invalid-provisioning-bundle":
+    "The provisioning bundle is missing required KAIRO runtime fields.",
   "port-selection-cancelled":
     "No device was selected. Click Connect device and choose the ESP32-S3 serial port.",
   "serial-connection-failed":
@@ -26,6 +37,9 @@ const ERROR_MESSAGES: Record<AppErrorCode, string> = {
     "Could not enter the device bootloader. Hold the boot button while connecting, then try again.",
   "flash-failed":
     "Flashing failed. Check the USB connection, make sure the device is in flashing mode, and try again.",
+  "provisioning-timeout":
+    "No provisioning response was received. Restart the device, reconnect the serial port, and try again.",
+  "provisioning-failed": "Provisioning failed. Check the bundle and device logs, then try again.",
   "reset-failed":
     "Flashing finished, but the device did not reset automatically. Press the reset button on the board.",
   unknown:
@@ -54,6 +68,14 @@ export function codeFromUnknownError(error: unknown): AppErrorCode {
 
     if (message.includes("flash")) {
       return "flash-failed";
+    }
+
+    if (message.includes("provisioning timeout")) {
+      return "provisioning-timeout";
+    }
+
+    if (message.includes("provisioning")) {
+      return "provisioning-failed";
     }
   }
 

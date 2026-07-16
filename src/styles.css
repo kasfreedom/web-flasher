@@ -177,7 +177,7 @@ button svg,
 
 .step-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -483,9 +483,24 @@ progress::-moz-progress-bar {
   line-height: 1.45;
 }
 
+@media (max-width: 1180px) {
+  .step-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .step-item:nth-child(3n) {
+    border-right: 0;
+  }
+}
+
 @media (max-width: 980px) {
-  .step-strip,
   .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .step-strip {
     grid-template-columns: 1fr;
   }
 
@@ -497,9 +512,6 @@ progress::-moz-progress-bar {
   .step-item:last-child {
     border-bottom: 0;
   }
-}
-
-@media (max-width: 720px) {
   body {
     background: var(--bg);
   }
