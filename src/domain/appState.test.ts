@@ -4,7 +4,9 @@ import {
   reducer,
   selectCanConnect,
   selectCanFlash,
+  selectCanProvision,
   selectFlashButtonLabel,
+  selectProvisionButtonLabel,
 } from "./appState";
 
 describe("appState", () => {
@@ -70,9 +72,64 @@ describe("appState", () => {
     });
     const success = reducer(selected, { type: "success" });
 
-    expect(selectCanConnect(success)).toBe(false);
+    expect(selectCanConnect(success)).toBe(true);
     expect(selectCanFlash(success)).toBe(true);
     expect(selectFlashButtonLabel(success)).toBe("Flash again");
+  });
+
+  it("allows provisioning only after firmware flash success and a valid bundle", () => {
+    const idle = createInitialState({ serialSupported: true, secureContext: true });
+    const connected = reducer(idle, { type: "connected", chipName: "ESP32-S3" });
+    const selected = reducer(connected, {
+      type: "provisioning-selected",
+      fileName: "kairo-dev-03.json",
+      sizeBytes: 1024,
+      deviceId: "kairo-dev-03",
+      thingName: "kairo-dev-03",
+      summary: "kairo-dev-03 / kairo-dev-03",
+    });
+    const flashed = reducer(selected, { type: "success" });
+
+    expect(selectCanProvision(selected)).toBe(false);
+    expect(selectCanProvision(flashed)).toBe(true);
+    expect(selectProvisionButtonLabel(flashed)).toBe("Send provisioning");
+  });
+
+  it("keeps firmware flash completion after a provisioning failure", () => {
+    const idle = createInitialState({ serialSupported: true, secureContext: true });
+    const connected = reducer(idle, { type: "connected", chipName: "ESP32-S3" });
+    const provisionSelected = reducer(connected, {
+      type: "provisioning-selected",
+      fileName: "kairo-dev-03.json",
+      sizeBytes: 1024,
+      deviceId: "kairo-dev-03",
+      thingName: "kairo-dev-03",
+      summary: "kairo-dev-03 / kairo-dev-03",
+    });
+    const flashed = reducer(provisionSelected, { type: "success" });
+    const failed = reducer(flashed, {
+      type: "failed",
+      errorCode: "provisioning-timeout",
+      errorDetail: "No provision_result response received.",
+    });
+
+    expect(failed.firmwareFlashed).toBe(true);
+    expect(selectCanProvision(failed)).toBe(true);
+    expect(selectProvisionButtonLabel(failed)).toBe("Try provisioning again");
+  });
+
+  it("marks successful provisioning as reboot required", () => {
+    const idle = createInitialState({ serialSupported: true, secureContext: true });
+    const connected = reducer(idle, { type: "connected", chipName: "ESP32-S3" });
+    const provisioning = reducer(connected, { type: "provisioning-started" });
+    const provisioned = reducer(provisioning, {
+      type: "provisioning-success",
+      rebootRequired: true,
+    });
+
+    expect(provisioned.status).toBe("provisioned");
+    expect(provisioned.rebootRequired).toBe(true);
+    expect(provisioned.nextStep).toBe("Provisioning finished. Restart or reset the device.");
   });
 
   it("allows retry after a flash failure when device and firmware remain selected", () => {
@@ -85,7 +142,7 @@ describe("appState", () => {
     });
     const failed = reducer(selected, { type: "failed", errorCode: "flash-failed" });
 
-    expect(selectCanConnect(failed)).toBe(false);
+    expect(selectCanConnect(failed)).toBe(true);
     expect(selectCanFlash(failed)).toBe(true);
     expect(selectFlashButtonLabel(failed)).toBe("Try again");
   });

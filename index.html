@@ -23,7 +23,7 @@
         </div>
       </header>
 
-      <section class="step-strip" aria-label="Flashing workflow">
+      <section class="step-strip" aria-label="Flashing and provisioning workflow">
         <article class="step-item" data-step="browser">
           <span class="step-number">1</span>
           <div>
@@ -62,6 +62,26 @@
               <span id="flashStepLabel" class="status-pill status-muted">Waiting</span>
             </div>
             <p>Write, verify, then reset</p>
+          </div>
+        </article>
+        <article class="step-item" data-step="provisioning-bundle">
+          <span class="step-number">5</span>
+          <div>
+            <div class="step-title-row">
+              <h2>Select bundle</h2>
+              <span id="provisioningStepLabel" class="status-pill status-muted">No file</span>
+            </div>
+            <p>Choose provisioning JSON</p>
+          </div>
+        </article>
+        <article class="step-item" data-step="provision">
+          <span class="step-number">6</span>
+          <div>
+            <div class="step-title-row">
+              <h2>Provision</h2>
+              <span id="sendProvisioningStepLabel" class="status-pill status-muted">Waiting</span>
+            </div>
+            <p>Send runtime config</p>
           </div>
         </article>
       </section>
@@ -109,6 +129,30 @@
             </button>
           </div>
 
+          <div class="workflow-row">
+            <span class="row-icon" aria-hidden="true"><span data-lucide="file-lock"></span></span>
+            <div class="row-body">
+              <h2>4. Choose provisioning bundle (.json)</h2>
+              <p>Select the per-device KAIRO runtime bundle from this computer.</p>
+            </div>
+            <label class="file-picker">
+              <span>Choose bundle</span>
+              <input id="provisioningInput" type="file" accept=".json,application/json" />
+            </label>
+          </div>
+
+          <div class="workflow-row">
+            <span class="row-icon" aria-hidden="true"><span data-lucide="send"></span></span>
+            <div class="row-body">
+              <h2>5. Send provisioning bundle</h2>
+              <p>Web Flasher sends the bundle over USB serial, then waits for the device result.</p>
+            </div>
+            <button id="provisionButton" class="primary-action" type="button">
+              <span data-lucide="send"></span>
+              Send provisioning
+            </button>
+          </div>
+
           <div class="progress-block" aria-label="Flash progress">
             <div class="progress-header">
               <span>Progress</span>
@@ -144,6 +188,14 @@
             <div>
               <dt><span data-lucide="shield-check"></span> Checksum</dt>
               <dd id="checksumSummary">Waiting</dd>
+            </div>
+            <div>
+              <dt><span data-lucide="file-lock"></span> Bundle</dt>
+              <dd id="provisioningSummary">No bundle selected</dd>
+            </div>
+            <div>
+              <dt><span data-lucide="badge-check"></span> Runtime</dt>
+              <dd id="runtimeSummary">Not provisioned</dd>
             </div>
             <div>
               <dt><span data-lucide="lock-keyhole"></span> Privacy</dt>

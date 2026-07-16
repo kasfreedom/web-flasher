@@ -1,13 +1,16 @@
 import "./styles.css";
 import {
   Cpu,
+  BadgeCheck,
   File,
+  FileLock,
   FileUp,
   Globe2,
   LockKeyhole,
   MapPin,
   PlugZap,
   ShieldCheck,
+  Send,
   Terminal,
   Trash2,
   Usb,
@@ -30,13 +33,16 @@ new AppController({
 createIcons({
   icons: {
     Cpu,
+    BadgeCheck,
     File,
+    FileLock,
     FileUp,
     Globe2,
     LockKeyhole,
     MapPin,
     PlugZap,
     ShieldCheck,
+    Send,
     Terminal,
     Trash2,
     Usb,
