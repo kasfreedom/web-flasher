@@ -23,7 +23,32 @@
         </div>
       </header>
 
-      <section class="step-strip" aria-label="Flashing and provisioning workflow">
+      <section id="unsupportedScreen" class="compatibility-screen" hidden>
+        <div class="compatibility-card">
+          <span class="compatibility-icon" aria-hidden="true"><span data-lucide="circle-alert"></span></span>
+          <div class="compatibility-copy">
+            <h2>This browser cannot flash ESP32 devices</h2>
+            <p id="compatibilityMessage">
+              Web Flasher needs Web Serial, which is available in desktop Chrome or Edge.
+            </p>
+          </div>
+          <div class="compatibility-actions" aria-label="Unsupported browser actions">
+            <a class="button-link" href="https://www.google.com/chrome/" rel="noreferrer" target="_blank">
+              Open in Chrome
+            </a>
+            <a
+              class="button-link secondary-link"
+              href="https://github.com/kasfreedom/web-flasher#advanced-fallback"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Python fallback
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section id="stepStrip" class="step-strip" aria-label="Flashing and provisioning workflow">
         <article class="step-item" data-step="browser">
           <span class="step-number">1</span>
           <div>
@@ -86,7 +111,7 @@
         </article>
       </section>
 
-      <section class="workspace">
+      <section id="workspace" class="workspace">
         <section class="workflow-column" aria-label="Flash and provisioning workflow">
           <section class="phase-panel phase-install" aria-label="Firmware install">
             <div class="phase-heading">
@@ -228,7 +253,7 @@
         </aside>
       </section>
 
-      <section class="log-section" aria-label="Logs">
+      <section id="logSection" class="log-section" aria-label="Logs">
         <div class="log-header">
           <div>
             <span data-lucide="terminal"></span>

@@ -2,6 +2,7 @@ import "./styles.css";
 import {
   Cpu,
   BadgeCheck,
+  CircleAlert,
   File,
   FileLock,
   FileUp,
@@ -34,6 +35,7 @@ createIcons({
   icons: {
     Cpu,
     BadgeCheck,
+    CircleAlert,
     File,
     FileLock,
     FileUp,

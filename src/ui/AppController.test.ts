@@ -43,6 +43,12 @@ const VALID_PROVISIONING_BUNDLE = {
 function setupDom(): void {
   document.body.innerHTML = `
     <div id="supportMessage"></div>
+    <section id="unsupportedScreen" hidden>
+      <p id="compatibilityMessage"></p>
+    </section>
+    <section id="stepStrip"></section>
+    <section id="workspace"></section>
+    <section id="logSection"></section>
     <span id="browserStatusLabel"></span>
     <span id="connectStepLabel"></span>
     <span id="firmwareStepLabel"></span>
@@ -97,11 +103,29 @@ describe("AppController", () => {
       secureContext: true,
     }).start();
 
-    expect(document.querySelector("#supportMessage")?.textContent).toBe("Unsupported browser");
-    expect(document.querySelector("#errorMessage")?.textContent).toContain(
+    expect(document.querySelector("#supportMessage")?.textContent).toBe("");
+    expect((document.querySelector("#unsupportedScreen") as HTMLElement).hidden).toBe(false);
+    expect((document.querySelector("#stepStrip") as HTMLElement).hidden).toBe(true);
+    expect((document.querySelector("#workspace") as HTMLElement).hidden).toBe(true);
+    expect((document.querySelector("#logSection") as HTMLElement).hidden).toBe(true);
+    expect(document.querySelector("#compatibilityMessage")?.textContent).toContain(
       "desktop Chrome or Edge",
     );
     expect((document.querySelector("#connectButton") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("hides the unsupported browser screen when Web Serial is available", () => {
+    new AppController({
+      root: document,
+      flasher: new FakeFlasher(),
+      serialSupported: true,
+      secureContext: true,
+    }).start();
+
+    expect((document.querySelector("#unsupportedScreen") as HTMLElement).hidden).toBe(true);
+    expect((document.querySelector("#stepStrip") as HTMLElement).hidden).toBe(false);
+    expect((document.querySelector("#workspace") as HTMLElement).hidden).toBe(false);
+    expect((document.querySelector("#logSection") as HTMLElement).hidden).toBe(false);
   });
 
   it("connects and renders the detected chip", async () => {
