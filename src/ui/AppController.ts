@@ -177,10 +177,15 @@ export class AppController {
 
   private render(): void {
     const browserSupported = this.state.status !== "unsupported";
-    this.supportMessage.textContent =
-      this.state.status === "unsupported" && this.state.errorCode
-        ? mapErrorToMessage(this.state.errorCode)
-        : "Web Serial is supported";
+    const compatibilityMessage = this.state.errorCode
+      ? mapErrorToMessage(this.state.errorCode)
+      : "";
+    this.supportMessage.textContent = "";
+    this.unsupportedScreen.hidden = browserSupported;
+    this.stepStrip.hidden = !browserSupported;
+    this.workspace.hidden = !browserSupported;
+    this.logSection.hidden = !browserSupported;
+    this.compatibilityMessage.textContent = browserSupported ? "" : compatibilityMessage;
 
     this.stateLabel.textContent = labelForStatus(this.state.status);
     const firmwareText = this.state.firmware
@@ -242,6 +247,26 @@ export class AppController {
 
   private get supportMessage(): HTMLDivElement {
     return this.required<HTMLDivElement>("#supportMessage");
+  }
+
+  private get unsupportedScreen(): HTMLElement {
+    return this.required<HTMLElement>("#unsupportedScreen");
+  }
+
+  private get compatibilityMessage(): HTMLElement {
+    return this.required<HTMLElement>("#compatibilityMessage");
+  }
+
+  private get stepStrip(): HTMLElement {
+    return this.required<HTMLElement>("#stepStrip");
+  }
+
+  private get workspace(): HTMLElement {
+    return this.required<HTMLElement>("#workspace");
+  }
+
+  private get logSection(): HTMLElement {
+    return this.required<HTMLElement>("#logSection");
   }
 
   private get connectButton(): HTMLButtonElement {
