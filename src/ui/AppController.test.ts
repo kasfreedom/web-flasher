@@ -97,7 +97,8 @@ describe("AppController", () => {
       secureContext: true,
     }).start();
 
-    expect(document.querySelector("#supportMessage")?.textContent).toContain(
+    expect(document.querySelector("#supportMessage")?.textContent).toBe("Unsupported browser");
+    expect(document.querySelector("#errorMessage")?.textContent).toContain(
       "desktop Chrome or Edge",
     );
     expect((document.querySelector("#connectButton") as HTMLButtonElement).disabled).toBe(true);

@@ -178,9 +178,7 @@ export class AppController {
   private render(): void {
     const browserSupported = this.state.status !== "unsupported";
     this.supportMessage.textContent =
-      this.state.status === "unsupported" && this.state.errorCode
-        ? mapErrorToMessage(this.state.errorCode)
-        : "Web Serial is supported";
+      this.state.status === "unsupported" ? "Unsupported browser" : "Web Serial supported";
 
     this.stateLabel.textContent = labelForStatus(this.state.status);
     const firmwareText = this.state.firmware
