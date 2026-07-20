@@ -542,16 +542,22 @@ button svg,
 
 .file-picker {
   display: inline-flex;
-  position: relative;
   align-items: center;
+  justify-content: center;
+  min-width: 146px;
 }
 
-.file-picker input {
+.file-input {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  margin: -1px;
   opacity: 0;
 }
 

@@ -68,8 +68,10 @@ function setupDom(): void {
     <button id="connectButton" type="button">Connect device</button>
     <input id="eraseConfirmInput" type="checkbox" />
     <button id="eraseButton" type="button">Erase device</button>
+    <button id="firmwarePickerButton" type="button">Choose firmware</button>
     <input id="firmwareInput" type="file" />
     <button id="flashButton" type="button">Flash</button>
+    <button id="provisioningPickerButton" type="button">Choose bundle</button>
     <input id="provisioningInput" type="file" />
     <button id="provisionButton" type="button">Send provisioning</button>
     <strong id="stateLabel"></strong>
@@ -138,6 +140,28 @@ describe("AppController", () => {
     expect((document.querySelector("#stepStrip") as HTMLElement).hidden).toBe(false);
     expect((document.querySelector("#workspace") as HTMLElement).hidden).toBe(false);
     expect((document.querySelector("#logSection") as HTMLElement).hidden).toBe(false);
+  });
+
+  it("opens hidden file inputs from visible picker buttons", () => {
+    new AppController({
+      root: document,
+      flasher: new FakeFlasher(),
+      serialSupported: true,
+      secureContext: true,
+    }).start();
+
+    const firmwareInput = document.querySelector("#firmwareInput") as HTMLInputElement;
+    const provisioningInput = document.querySelector("#provisioningInput") as HTMLInputElement;
+    const firmwareClick = vi.spyOn(firmwareInput, "click").mockImplementation(() => undefined);
+    const provisioningClick = vi
+      .spyOn(provisioningInput, "click")
+      .mockImplementation(() => undefined);
+
+    (document.querySelector("#firmwarePickerButton") as HTMLButtonElement).click();
+    (document.querySelector("#provisioningPickerButton") as HTMLButtonElement).click();
+
+    expect(firmwareClick).toHaveBeenCalledOnce();
+    expect(provisioningClick).toHaveBeenCalledOnce();
   });
 
   it("connects and renders the detected chip", async () => {

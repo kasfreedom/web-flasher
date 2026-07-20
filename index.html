@@ -146,10 +146,15 @@
                   <h3>Choose firmware (.bin)</h3>
                   <p>Use the merged firmware image.</p>
                 </div>
-                <label class="file-picker">
-                  <span>Choose firmware</span>
-                  <input id="firmwareInput" type="file" accept=".bin,application/octet-stream" />
-                </label>
+                <button id="firmwarePickerButton" class="file-picker" type="button">
+                  Choose firmware
+                </button>
+                <input
+                  id="firmwareInput"
+                  class="file-input"
+                  type="file"
+                  accept=".bin,application/octet-stream"
+                />
               </div>
 
               <div class="workflow-row">
@@ -190,10 +195,15 @@
                   <h3>Choose bundle (.json)</h3>
                   <p>Select the KAIRO runtime bundle.</p>
                 </div>
-                <label class="file-picker">
-                  <span>Choose bundle</span>
-                  <input id="provisioningInput" type="file" accept=".json,application/json" />
-                </label>
+                <button id="provisioningPickerButton" class="file-picker" type="button">
+                  Choose bundle
+                </button>
+                <input
+                  id="provisioningInput"
+                  class="file-input"
+                  type="file"
+                  accept=".json,application/json"
+                />
               </div>
 
               <div class="workflow-row">

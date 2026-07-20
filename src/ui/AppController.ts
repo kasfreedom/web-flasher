@@ -54,6 +54,8 @@ export class AppController {
     this.eraseConfirmInput.addEventListener("change", () => this.render());
     this.flashButton.addEventListener("click", () => void this.flash());
     this.provisionButton.addEventListener("click", () => void this.provision());
+    this.firmwarePickerButton.addEventListener("click", () => this.firmwareInput.click());
+    this.provisioningPickerButton.addEventListener("click", () => this.provisioningInput.click());
     this.firmwareInput.addEventListener("change", () => void this.selectFirmware());
     this.provisioningInput.addEventListener("change", () => void this.selectProvisioningBundle());
     this.clearLogsButton.addEventListener("click", () => {
@@ -281,10 +283,12 @@ export class AppController {
       this.state.status === "unsupported" ||
       this.state.status === "flashing" ||
       this.state.status === "provisioning";
+    this.firmwarePickerButton.disabled = this.firmwareInput.disabled;
     this.provisioningInput.disabled =
       this.state.status === "unsupported" ||
       this.state.status === "flashing" ||
       this.state.status === "provisioning";
+    this.provisioningPickerButton.disabled = this.provisioningInput.disabled;
   }
 
   private setStatusClass(
@@ -334,8 +338,16 @@ export class AppController {
     return this.required<HTMLInputElement>("#firmwareInput");
   }
 
+  private get firmwarePickerButton(): HTMLButtonElement {
+    return this.required<HTMLButtonElement>("#firmwarePickerButton");
+  }
+
   private get provisioningInput(): HTMLInputElement {
     return this.required<HTMLInputElement>("#provisioningInput");
+  }
+
+  private get provisioningPickerButton(): HTMLButtonElement {
+    return this.required<HTMLButtonElement>("#provisioningPickerButton");
   }
 
   private get flashButton(): HTMLButtonElement {
