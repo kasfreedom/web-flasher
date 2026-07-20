@@ -68,10 +68,8 @@ function setupDom(): void {
     <button id="connectButton" type="button">Connect device</button>
     <input id="eraseConfirmInput" type="checkbox" />
     <button id="eraseButton" type="button">Erase device</button>
-    <label id="firmwarePickerButton" for="firmwareInput">Choose firmware</label>
     <input id="firmwareInput" type="file" />
     <button id="flashButton" type="button">Flash</button>
-    <label id="provisioningPickerButton" for="provisioningInput">Choose bundle</label>
     <input id="provisioningInput" type="file" />
     <button id="provisionButton" type="button">Send provisioning</button>
     <strong id="stateLabel"></strong>
@@ -142,7 +140,7 @@ describe("AppController", () => {
     expect((document.querySelector("#logSection") as HTMLElement).hidden).toBe(false);
   });
 
-  it("wires visible file picker labels to hidden file inputs", () => {
+  it("keeps native file inputs enabled before operations start", () => {
     new AppController({
       root: document,
       flasher: new FakeFlasher(),
@@ -150,15 +148,8 @@ describe("AppController", () => {
       secureContext: true,
     }).start();
 
-    const firmwarePicker = document.querySelector("#firmwarePickerButton") as HTMLLabelElement;
-    const provisioningPicker = document.querySelector(
-      "#provisioningPickerButton",
-    ) as HTMLLabelElement;
-
-    expect(firmwarePicker.htmlFor).toBe("firmwareInput");
-    expect(provisioningPicker.htmlFor).toBe("provisioningInput");
-    expect(firmwarePicker.getAttribute("aria-disabled")).toBe("false");
-    expect(provisioningPicker.getAttribute("aria-disabled")).toBe("false");
+    expect((document.querySelector("#firmwareInput") as HTMLInputElement).disabled).toBe(false);
+    expect((document.querySelector("#provisioningInput") as HTMLInputElement).disabled).toBe(false);
   });
 
   it("connects and renders the detected chip", async () => {

@@ -281,17 +281,10 @@ export class AppController {
       this.state.status === "unsupported" ||
       this.state.status === "flashing" ||
       this.state.status === "provisioning";
-    this.setFilePickerDisabled(this.firmwarePickerButton, this.firmwareInput.disabled);
     this.provisioningInput.disabled =
       this.state.status === "unsupported" ||
       this.state.status === "flashing" ||
       this.state.status === "provisioning";
-    this.setFilePickerDisabled(this.provisioningPickerButton, this.provisioningInput.disabled);
-  }
-
-  private setFilePickerDisabled(element: HTMLElement, disabled: boolean): void {
-    element.setAttribute("aria-disabled", String(disabled));
-    element.tabIndex = disabled ? -1 : 0;
   }
 
   private setStatusClass(
@@ -341,16 +334,8 @@ export class AppController {
     return this.required<HTMLInputElement>("#firmwareInput");
   }
 
-  private get firmwarePickerButton(): HTMLElement {
-    return this.required<HTMLElement>("#firmwarePickerButton");
-  }
-
   private get provisioningInput(): HTMLInputElement {
     return this.required<HTMLInputElement>("#provisioningInput");
-  }
-
-  private get provisioningPickerButton(): HTMLElement {
-    return this.required<HTMLElement>("#provisioningPickerButton");
   }
 
   private get flashButton(): HTMLButtonElement {
