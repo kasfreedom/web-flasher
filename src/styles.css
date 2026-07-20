@@ -545,8 +545,20 @@ button svg,
   align-items: center;
   justify-content: center;
   min-width: 146px;
+  min-height: 40px;
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  padding: 0 16px;
+  color: #ffffff;
+  background: var(--primary);
   cursor: pointer;
+  font-weight: 800;
+  line-height: 1;
   user-select: none;
+}
+
+.file-picker:hover {
+  background: var(--primary-strong);
 }
 
 .file-picker[aria-disabled="true"] {
