@@ -1,16 +1,18 @@
 import {
   createInitialState,
   reducer,
+  selectCanErase,
   selectCanConnect,
   selectCanFlash,
   selectCanProvision,
+  selectEraseButtonLabel,
   selectFlashButtonLabel,
   selectProvisionButtonLabel,
   type AppAction,
   type AppState,
 } from "../domain/appState";
 import { FLASH_OFFSET } from "../domain/constants";
-import { codeFromUnknownError, mapErrorToMessage } from "../domain/errors";
+import { codeFromUnknownError, mapErrorToMessage, type AppErrorCode } from "../domain/errors";
 import { readFirmwareFile, validateFirmwareFile, type FirmwareImage } from "../domain/firmwareFile";
 import {
   readProvisioningBundleFile,
@@ -19,6 +21,13 @@ import {
 import type { FlasherClient } from "../flasher/FlasherClient";
 
 const PROVISIONING_TIMEOUT_MS = 15000;
+const FLASH_STATUS_ERROR_CODES = new Set<AppErrorCode>([
+  "empty-firmware",
+  "invalid-firmware-extension",
+  "missing-firmware",
+  "flash-failed",
+  "reset-failed",
+]);
 
 interface AppControllerOptions {
   root: ParentNode;
@@ -41,6 +50,8 @@ export class AppController {
 
   start(): void {
     this.connectButton.addEventListener("click", () => void this.connect());
+    this.eraseButton.addEventListener("click", () => void this.erase());
+    this.eraseConfirmInput.addEventListener("change", () => this.render());
     this.flashButton.addEventListener("click", () => void this.flash());
     this.provisionButton.addEventListener("click", () => void this.provision());
     this.firmwareInput.addEventListener("change", () => void this.selectFirmware());
@@ -131,9 +142,28 @@ export class AppController {
         onLog: (message) => this.appendLog(message),
       });
       await this.options.flasher.reset();
+      await this.releaseDeviceConnection();
       this.dispatch({ type: "success" });
       this.appendLog("Flashing finished.");
     } catch (error) {
+      await this.releaseDeviceConnection();
+      this.dispatch({ type: "failed", errorCode: codeFromUnknownError(error) });
+    }
+  }
+
+  private async erase(): Promise<void> {
+    this.dispatch({ type: "erase-started" });
+
+    try {
+      await this.options.flasher.erase({
+        onLog: (message) => this.appendLog(message),
+      });
+      await this.releaseDeviceConnection();
+      this.dispatch({ type: "erase-success" });
+      this.eraseConfirmInput.checked = false;
+      this.render();
+    } catch (error) {
+      await this.releaseDeviceConnection();
       this.dispatch({ type: "failed", errorCode: codeFromUnknownError(error) });
     }
   }
@@ -154,9 +184,11 @@ export class AppController {
       });
 
       this.dispatch({ type: "provisioning-success", rebootRequired: result.rebootRequired });
+      await this.releaseDeviceConnection();
       this.appendLog("Provisioning finished.");
     } catch (error) {
       const errorCode = codeFromUnknownError(error);
+      await this.releaseDeviceConnection();
       this.dispatch({
         type: "failed",
         errorCode,
@@ -175,6 +207,16 @@ export class AppController {
     this.logOutput.textContent = this.state.logs.join("\n");
   }
 
+  private async releaseDeviceConnection(): Promise<void> {
+    try {
+      await this.options.flasher.disconnect();
+      this.dispatch({ type: "device-released" });
+      this.appendLog("Serial connection released. Select the correct port for the next step.");
+    } catch {
+      this.dispatch({ type: "device-released" });
+    }
+  }
+
   private render(): void {
     const browserSupported = this.state.status !== "unsupported";
     const compatibilityMessage = this.state.errorCode
@@ -187,7 +229,7 @@ export class AppController {
     this.logSection.hidden = !browserSupported;
     this.compatibilityMessage.textContent = browserSupported ? "" : compatibilityMessage;
 
-    this.stateLabel.textContent = labelForStatus(this.state.status);
+    this.stateLabel.textContent = labelForFirmwarePhaseStatus(this.state);
     const firmwareText = this.state.firmware
       ? `${this.state.firmware.fileName} (${formatBytes(this.state.firmware.sizeBytes)})`
       : "No file selected";
@@ -224,6 +266,13 @@ export class AppController {
     this.setStatusClass(this.sendProvisioningStepLabel, statusToneForProvisioning(this.state));
 
     this.connectButton.disabled = !selectCanConnect(this.state);
+    this.eraseButton.textContent = selectEraseButtonLabel(this.state);
+    this.eraseButton.disabled = !selectCanErase(this.state) || !this.eraseConfirmInput.checked;
+    this.eraseConfirmInput.disabled =
+      this.state.status === "unsupported" ||
+      this.state.status === "erasing" ||
+      this.state.status === "flashing" ||
+      this.state.status === "provisioning";
     this.flashButton.textContent = selectFlashButtonLabel(this.state);
     this.flashButton.disabled = !selectCanFlash(this.state);
     this.provisionButton.textContent = selectProvisionButtonLabel(this.state);
@@ -271,6 +320,14 @@ export class AppController {
 
   private get connectButton(): HTMLButtonElement {
     return this.required<HTMLButtonElement>("#connectButton");
+  }
+
+  private get eraseButton(): HTMLButtonElement {
+    return this.required<HTMLButtonElement>("#eraseButton");
+  }
+
+  private get eraseConfirmInput(): HTMLInputElement {
+    return this.required<HTMLInputElement>("#eraseConfirmInput");
   }
 
   private get firmwareInput(): HTMLInputElement {
@@ -414,11 +471,18 @@ function labelForFlashStep(state: AppState): string {
     case "flashing":
       return "Writing";
     case "success":
-    case "provisioning":
     case "provisioned":
-      return "Verified";
+      return state.firmwareFlashed ? "Verified" : "Waiting";
+    case "provisioning":
+      return state.firmwareFlashed ? "Verified" : "Waiting";
     case "failed":
-      return state.firmwareFlashed ? "Verified" : "Failed";
+      return state.firmwareFlashed
+        ? "Verified"
+        : isFlashStatusError(state.errorCode)
+          ? "Failed"
+          : selectCanFlash(state)
+            ? "Ready"
+            : "Waiting";
     default:
       return selectCanFlash(state) ? "Ready" : "Waiting";
   }
@@ -429,11 +493,18 @@ function labelForChecksum(state: AppState): string {
     case "flashing":
       return "Verifying";
     case "success":
-    case "provisioning":
     case "provisioned":
-      return "Verified";
+      return state.firmwareFlashed ? "Verified" : state.firmware ? "Pending" : "Waiting";
+    case "provisioning":
+      return state.firmwareFlashed ? "Verified" : state.firmware ? "Pending" : "Waiting";
     case "failed":
-      return state.firmwareFlashed ? "Verified" : "Not verified";
+      return state.firmwareFlashed
+        ? "Verified"
+        : isFlashStatusError(state.errorCode)
+          ? "Not verified"
+          : state.firmware
+            ? "Pending"
+            : "Waiting";
     default:
       return state.firmware ? "Pending" : "Waiting";
   }
@@ -446,7 +517,7 @@ function labelForProvisioningStep(state: AppState): string {
     case "provisioned":
       return "Done";
     case "failed":
-      return state.firmwareFlashed ? "Retry" : "Waiting";
+      return state.provisioning ? "Retry" : "Waiting";
     default:
       return selectCanProvision(state) ? "Ready" : "Waiting";
   }
@@ -467,11 +538,18 @@ function labelForRuntimeSummary(state: AppState): string {
 function statusToneForFlash(state: AppState): "success" | "warning" | "danger" | "muted" {
   switch (state.status) {
     case "success":
-    case "provisioning":
     case "provisioned":
-      return "success";
+      return state.firmwareFlashed ? "success" : "muted";
+    case "provisioning":
+      return state.firmwareFlashed ? "success" : "muted";
     case "failed":
-      return state.firmwareFlashed ? "success" : "danger";
+      return state.firmwareFlashed
+        ? "success"
+        : isFlashStatusError(state.errorCode)
+          ? "danger"
+          : selectCanFlash(state)
+            ? "success"
+            : "muted";
     case "flashing":
       return "warning";
     default:
@@ -488,14 +566,14 @@ function statusToneForProvisioning(
     case "provisioning":
       return "warning";
     case "failed":
-      return state.firmwareFlashed ? "danger" : "muted";
+      return state.provisioning ? "danger" : "muted";
     default:
       return selectCanProvision(state) ? "success" : "muted";
   }
 }
 
-function labelForStatus(status: AppState["status"]): string {
-  switch (status) {
+function labelForFirmwarePhaseStatus(state: AppState): string {
+  switch (state.status) {
     case "unsupported":
       return "Unsupported";
     case "idle":
@@ -504,15 +582,29 @@ function labelForStatus(status: AppState["status"]): string {
       return "Connecting";
     case "connected":
       return "Connected";
+    case "erasing":
+      return "Erasing";
+    case "erased":
+      return "Erased";
     case "flashing":
       return "Flashing";
     case "provisioning":
-      return "Provisioning";
     case "provisioned":
-      return "Provisioned";
     case "success":
-      return "Success";
+      return state.firmwareFlashed ? "Success" : state.chipName ? "Connected" : "Idle";
     case "failed":
-      return "Failed";
+      if (state.firmwareFlashed) {
+        return "Success";
+      }
+
+      if (isFlashStatusError(state.errorCode)) {
+        return "Failed";
+      }
+
+      return state.chipName ? "Connected" : "Idle";
   }
+}
+
+function isFlashStatusError(errorCode: AppErrorCode | null): boolean {
+  return errorCode !== null && FLASH_STATUS_ERROR_CODES.has(errorCode);
 }

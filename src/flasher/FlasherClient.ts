@@ -18,6 +18,10 @@ export interface ProvisionInput {
   onLog: (message: string) => void;
 }
 
+export interface EraseDeviceInput {
+  onLog: (message: string) => void;
+}
+
 export interface ProvisionResult {
   ok: boolean;
   rebootRequired: boolean;
@@ -27,6 +31,7 @@ export interface ProvisionResult {
 export interface FlasherClient {
   connect(onLog: (message: string) => void): Promise<{ chipName: string }>;
   flash(input: FlashFirmwareInput): Promise<void>;
+  erase(input: EraseDeviceInput): Promise<void>;
   provision(input: ProvisionInput): Promise<ProvisionResult>;
   reset(): Promise<void>;
   disconnect(): Promise<void>;

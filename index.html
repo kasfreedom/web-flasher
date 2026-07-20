@@ -112,6 +112,23 @@
       </section>
 
       <section id="workspace" class="workspace">
+        <section class="connection-panel" aria-label="Device connection">
+          <div class="section-heading">
+            <span>Connect device</span>
+          </div>
+          <div class="workflow-row connection-row">
+            <span class="row-icon" aria-hidden="true"><span data-lucide="usb"></span></span>
+            <div class="row-body">
+              <h3>Connect device</h3>
+              <p>Select the ESP32-S3 serial port. Web Flasher will switch it into flashing mode when possible.</p>
+            </div>
+            <button id="connectButton" type="button">
+              <span data-lucide="plug-zap"></span>
+              Connect device
+            </button>
+          </div>
+        </section>
+
         <section class="workflow-column" aria-label="Flash and provisioning workflow">
           <section class="phase-panel phase-install" aria-label="Firmware install">
             <div class="phase-heading">
@@ -123,18 +140,6 @@
             </div>
 
             <div class="phase-steps">
-              <div class="workflow-row">
-                <span class="row-icon" aria-hidden="true"><span data-lucide="usb"></span></span>
-                <div class="row-body">
-                  <h3>Connect device</h3>
-                  <p>Select the ESP32-S3 serial port.</p>
-                </div>
-                <button id="connectButton" type="button">
-                  <span data-lucide="plug-zap"></span>
-                  Connect device
-                </button>
-              </div>
-
               <div class="workflow-row">
                 <span class="row-icon" aria-hidden="true"><span data-lucide="file-up"></span></span>
                 <div class="row-body">
@@ -151,7 +156,7 @@
                 <span class="row-icon" aria-hidden="true"><span data-lucide="zap"></span></span>
                 <div class="row-body">
                   <h3>Flash firmware</h3>
-                  <p>Write at offset 0x0 and verify.</p>
+                  <p>Uses ESP32 flashing mode. If connection fails, hold BOOT while connecting, then try again.</p>
                 </div>
                 <button id="flashButton" class="primary-action" type="button">
                   <span data-lucide="zap"></span>
@@ -175,7 +180,7 @@
                 <span class="phase-kicker">2. Runtime provisioning</span>
                 <h2>Send per-device config and certificates</h2>
               </div>
-              <span class="phase-note">After firmware flash</span>
+              <span class="phase-note">No flash required</span>
             </div>
 
             <div class="phase-steps">
@@ -195,7 +200,7 @@
                 <span class="row-icon" aria-hidden="true"><span data-lucide="send"></span></span>
                 <div class="row-body">
                   <h3>Send provisioning</h3>
-                  <p>Send over USB serial and wait for the device result.</p>
+                  <p>Select the running KAIRO device and wait for the result.</p>
                 </div>
                 <button id="provisionButton" class="primary-action" type="button">
                   <span data-lucide="send"></span>
@@ -251,6 +256,27 @@
             </div>
           </dl>
         </aside>
+
+        <section class="danger-panel" aria-label="Danger area">
+          <div class="section-heading danger-heading">
+            <span>Danger area</span>
+          </div>
+          <div class="workflow-row danger-row">
+            <span class="row-icon danger-icon" aria-hidden="true"><span data-lucide="trash-2"></span></span>
+            <div class="row-body">
+              <h3>Erase device flash</h3>
+              <p>Uses ESP32 flashing mode and clears firmware, config, certificates, and saved data.</p>
+              <label class="danger-confirm">
+                <input id="eraseConfirmInput" type="checkbox" />
+                I understand this clears the device.
+              </label>
+            </div>
+            <button id="eraseButton" class="danger-action" type="button">
+              <span data-lucide="trash-2"></span>
+              Erase device
+            </button>
+          </div>
+        </section>
       </section>
 
       <section id="logSection" class="log-section" aria-label="Logs">

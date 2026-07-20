@@ -29,8 +29,13 @@ Safari, iPhone, and Firefox are not primary targets for this version because Web
 7. Wait for progress to reach 100%.
 8. Choose the per-device provisioning `.json` bundle from this computer.
 9. Click **Send provisioning**.
-10. Wait for the device to report success.
-11. Restart or reset the device when Web Flasher says reboot is required.
+10. Select the running KAIRO firmware serial port when the browser asks again.
+11. Wait for the device to report success.
+12. Restart or reset the device when Web Flasher says reboot is required.
+
+Erase and flash use ESP32 flashing mode. Web Flasher tries to switch the device into flashing mode automatically. If connection fails, hold BOOT while connecting, then try again.
+
+Provisioning uses the running KAIRO firmware, not flashing mode. After erase, flash, or provisioning, Web Flasher releases the serial connection so the next step can select the correct device mode and port.
 
 For KAIRO testers, use the merged KAIRO firmware binary and flash it at `0x0`.
 

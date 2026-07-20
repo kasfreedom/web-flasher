@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   reducer,
+  selectCanErase,
   selectCanConnect,
   selectCanFlash,
   selectCanProvision,
+  selectEraseButtonLabel,
   selectFlashButtonLabel,
   selectProvisionButtonLabel,
 } from "./appState";
@@ -62,7 +64,7 @@ describe("appState", () => {
     expect(selectCanFlash(failed)).toBe(false);
   });
 
-  it("allows flashing again after success when device and firmware remain selected", () => {
+  it("requires reconnecting before flashing again after success", () => {
     const idle = createInitialState({ serialSupported: true, secureContext: true });
     const connected = reducer(idle, { type: "connected", chipName: "ESP32-S3" });
     const selected = reducer(connected, {
@@ -73,14 +75,46 @@ describe("appState", () => {
     const success = reducer(selected, { type: "success" });
 
     expect(selectCanConnect(success)).toBe(true);
-    expect(selectCanFlash(success)).toBe(true);
+    expect(success.chipName).toBeNull();
+    expect(selectCanFlash(success)).toBe(false);
     expect(selectFlashButtonLabel(success)).toBe("Flash again");
   });
 
-  it("allows provisioning only after firmware flash success and a valid bundle", () => {
+  it("allows erasing only after a device is connected and blocks other actions while erasing", () => {
+    const idle = createInitialState({ serialSupported: true, secureContext: true });
+    const connected = reducer(idle, { type: "connected", chipName: "ESP32-S3" });
+    const erasing = reducer(connected, { type: "erase-started" });
+
+    expect(selectCanErase(idle)).toBe(false);
+    expect(selectCanErase(connected)).toBe(true);
+    expect(selectCanConnect(erasing)).toBe(false);
+    expect(selectCanFlash(erasing)).toBe(false);
+    expect(selectCanProvision(erasing)).toBe(false);
+    expect(selectEraseButtonLabel(erasing)).toBe("Erasing...");
+  });
+
+  it("releases the device after erase succeeds and requires reconnect before flashing", () => {
     const idle = createInitialState({ serialSupported: true, secureContext: true });
     const connected = reducer(idle, { type: "connected", chipName: "ESP32-S3" });
     const selected = reducer(connected, {
+      type: "firmware-selected",
+      fileName: "kairo-demo.bin",
+      sizeBytes: 4,
+    });
+    const erasing = reducer(selected, { type: "erase-started" });
+    const erased = reducer(erasing, { type: "erase-success" });
+
+    expect(erased.status).toBe("erased");
+    expect(erased.chipName).toBeNull();
+    expect(erased.firmwareFlashed).toBe(false);
+    expect(selectCanFlash(erased)).toBe(false);
+    expect(selectEraseButtonLabel(erased)).toBe("Erase again");
+    expect(erased.nextStep).toContain("Reconnect the device");
+  });
+
+  it("allows provisioning with a valid bundle even when firmware was not flashed in this session", () => {
+    const idle = createInitialState({ serialSupported: true, secureContext: true });
+    const selected = reducer(idle, {
       type: "provisioning-selected",
       fileName: "kairo-dev-03.json",
       sizeBytes: 1024,
@@ -88,11 +122,10 @@ describe("appState", () => {
       thingName: "kairo-dev-03",
       summary: "kairo-dev-03 / kairo-dev-03",
     });
-    const flashed = reducer(selected, { type: "success" });
 
-    expect(selectCanProvision(selected)).toBe(false);
-    expect(selectCanProvision(flashed)).toBe(true);
-    expect(selectProvisionButtonLabel(flashed)).toBe("Send provisioning");
+    expect(selectCanProvision(idle)).toBe(false);
+    expect(selectCanProvision(selected)).toBe(true);
+    expect(selectProvisionButtonLabel(selected)).toBe("Send provisioning");
   });
 
   it("keeps firmware flash completion after a provisioning failure", () => {
@@ -132,7 +165,7 @@ describe("appState", () => {
     expect(provisioned.nextStep).toBe("Provisioning finished. Restart or reset the device.");
   });
 
-  it("allows retry after a flash failure when device and firmware remain selected", () => {
+  it("requires reconnect before retrying after a released flash failure", () => {
     const idle = createInitialState({ serialSupported: true, secureContext: true });
     const connected = reducer(idle, { type: "connected", chipName: "ESP32-S3" });
     const selected = reducer(connected, {
@@ -140,11 +173,30 @@ describe("appState", () => {
       fileName: "kairo-demo.bin",
       sizeBytes: 4,
     });
-    const failed = reducer(selected, { type: "failed", errorCode: "flash-failed" });
+    const released = reducer(selected, { type: "device-released" });
+    const failed = reducer(released, { type: "failed", errorCode: "flash-failed" });
 
     expect(selectCanConnect(failed)).toBe(true);
+    expect(selectCanFlash(failed)).toBe(false);
+    expect(selectFlashButtonLabel(failed)).toBe("Flash");
+  });
+
+  it("does not label flash as a retry after a provisioning bundle validation failure", () => {
+    const idle = createInitialState({ serialSupported: true, secureContext: true });
+    const connected = reducer(idle, { type: "connected", chipName: "ESP32-S3" });
+    const selected = reducer(connected, {
+      type: "firmware-selected",
+      fileName: "kairo-demo.bin",
+      sizeBytes: 4,
+    });
+    const failed = reducer(selected, {
+      type: "failed",
+      errorCode: "invalid-provisioning-bundle",
+      errorDetail: "Provisioning bundle is missing deviceId.",
+    });
+
     expect(selectCanFlash(failed)).toBe(true);
-    expect(selectFlashButtonLabel(failed)).toBe("Try again");
+    expect(selectFlashButtonLabel(failed)).toBe("Flash");
   });
 
   it("allows reconnect after a connection failure before any device is connected", () => {

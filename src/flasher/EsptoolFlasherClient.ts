@@ -1,11 +1,14 @@
 import {
   ESPLoader,
   type FlashOptions,
+  HardReset,
   type IEspLoaderTerminal,
   Transport,
+  UsbJtagSerialReset,
 } from "esptool-js";
 import { calculateMd5Hex } from "../domain/md5Hash";
 import type {
+  EraseDeviceInput,
   FlashFirmwareInput,
   FlasherClient,
   ProvisionInput,
@@ -17,7 +20,9 @@ const DEFAULT_BAUDRATE = 115200;
 const DEFAULT_FLASH_MODE = "dio";
 const DEFAULT_FLASH_FREQ = "40m";
 const DEFAULT_FLASH_SIZE = "keep";
-const SERIAL_REOPEN_DELAY_MS = 500;
+const SERIAL_REOPEN_DELAY_MS = 1000;
+const PROVISIONING_RUNTIME_START_DELAY_MS = 5000;
+const USB_JTAG_SERIAL_PID = 0x1001;
 
 export class EsptoolFlasherClient implements FlasherClient {
   private selectedPort: SerialPort | null = null;
@@ -79,48 +84,84 @@ export class EsptoolFlasherClient implements FlasherClient {
     await this.loader.writeFlash(options);
   }
 
-  async provision(input: ProvisionInput): Promise<ProvisionResult> {
-    if (!this.selectedPort) {
+  async erase(input: EraseDeviceInput): Promise<void> {
+    if (!this.loader) {
       throw new Error("serial connection is not open");
     }
 
-    const command = buildProvisioningCommand(input.bundleJson);
-    input.onLog(`Sending provisioning command (${command.bytes.length} bytes).`);
+    input.onLog("Erasing full device flash.");
+    await this.loader.eraseFlash();
+    input.onLog("Device flash erased.");
+  }
 
+  async provision(input: ProvisionInput): Promise<ProvisionResult> {
+    const command = buildProvisioningCommand(input.bundleJson);
+    input.onLog(`Provisioning command ready (${command.bytes.length} bytes).`);
+
+    await this.resetForRuntime();
     await this.releaseEsptoolTransport();
+    await this.forgetSelectedPort();
     await wait(SERIAL_REOPEN_DELAY_MS);
 
+    this.selectedPort = await navigator.serial.requestPort();
+    input.onLog("Serial port selected for provisioning.");
+
     await openPortIfNeeded(this.selectedPort);
+    await setPlainSerialSignals(this.selectedPort);
+    input.onLog("Waiting for device runtime to start.");
+    await wait(PROVISIONING_RUNTIME_START_DELAY_MS);
 
     try {
+      input.onLog(`Sending provisioning command (${command.bytes.length} bytes).`);
       await writePlainSerialLine(this.selectedPort, command.bytes);
       const result = await readProvisioningResult(this.selectedPort, input.timeoutMs);
       input.onLog("Provisioning response received.");
       return result;
     } finally {
-      await closePortIfOpen(this.selectedPort);
+      await this.forgetSelectedPort();
     }
   }
 
   async reset(): Promise<void> {
+    await this.resetForRuntime();
+  }
+
+  private async resetForRuntime(): Promise<void> {
     if (!this.loader) {
       return;
     }
 
-    await this.loader.after("hard_reset");
+    if (!this.transport) {
+      return;
+    }
+
+    if (this.transport.getPid() === USB_JTAG_SERIAL_PID) {
+      this.loader.info("Resetting USB-JTAG serial device...");
+      await new UsbJtagSerialReset(this.transport).reset();
+      return;
+    }
+
+    this.loader.info("Hard resetting via RTS pin...");
+    await new HardReset(this.transport).reset();
   }
 
   async disconnect(): Promise<void> {
     await this.releaseEsptoolTransport();
-    if (this.selectedPort) {
-      await closePortIfOpen(this.selectedPort);
-    }
+    await this.forgetSelectedPort();
   }
 
   private async releaseEsptoolTransport(): Promise<void> {
     await this.transport?.disconnect();
     this.loader = null;
     this.transport = null;
+  }
+
+  private async forgetSelectedPort(): Promise<void> {
+    if (this.selectedPort) {
+      await closePortIfOpen(this.selectedPort);
+    }
+
+    this.selectedPort = null;
   }
 }
 
@@ -130,6 +171,17 @@ async function openPortIfNeeded(port: SerialPort): Promise<void> {
   }
 
   await port.open({ baudRate: DEFAULT_BAUDRATE });
+}
+
+async function setPlainSerialSignals(port: SerialPort): Promise<void> {
+  if (!("setSignals" in port)) {
+    return;
+  }
+
+  await port.setSignals({
+    dataTerminalReady: false,
+    requestToSend: false,
+  });
 }
 
 async function closePortIfOpen(port: SerialPort): Promise<void> {

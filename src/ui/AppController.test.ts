@@ -1,11 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppController } from "./AppController";
-import type { FlashFirmwareInput, FlasherClient, ProvisionInput } from "../flasher/FlasherClient";
+import type {
+  EraseDeviceInput,
+  FlashFirmwareInput,
+  FlasherClient,
+  ProvisionInput,
+} from "../flasher/FlasherClient";
 
 class FakeFlasher implements FlasherClient {
   flashInput: FlashFirmwareInput | null = null;
   provisionInput: ProvisionInput | null = null;
+  eraseInput: EraseDeviceInput | null = null;
   connect = vi.fn(async () => ({ chipName: "ESP32-S3" }));
+  erase = vi.fn(async (input: EraseDeviceInput) => {
+    this.eraseInput = input;
+    input.onLog("Device flash erased.");
+  });
   flash = vi.fn(async (input: FlashFirmwareInput) => {
     this.flashInput = input;
     input.onProgress({ fileIndex: 0, writtenBytes: 5, totalBytes: 10, percentage: 50 });
@@ -56,6 +66,8 @@ function setupDom(): void {
     <span id="provisioningStepLabel"></span>
     <span id="sendProvisioningStepLabel"></span>
     <button id="connectButton" type="button">Connect device</button>
+    <input id="eraseConfirmInput" type="checkbox" />
+    <button id="eraseButton" type="button">Erase device</button>
     <input id="firmwareInput" type="file" />
     <button id="flashButton" type="button">Flash</button>
     <input id="provisioningInput" type="file" />
@@ -146,6 +158,60 @@ describe("AppController", () => {
     expect(document.querySelector("#deviceSummary")?.textContent).toBe("ESP32-S3");
   });
 
+  it("enables erase only after connecting and confirming the danger checkbox", async () => {
+    const flasher = new FakeFlasher();
+    new AppController({
+      root: document,
+      flasher,
+      serialSupported: true,
+      secureContext: true,
+    }).start();
+
+    const eraseButton = document.querySelector("#eraseButton") as HTMLButtonElement;
+    const eraseConfirm = document.querySelector("#eraseConfirmInput") as HTMLInputElement;
+
+    expect(eraseButton.disabled).toBe(true);
+
+    (document.querySelector("#connectButton") as HTMLButtonElement).click();
+    await Promise.resolve();
+
+    expect(eraseButton.disabled).toBe(true);
+
+    eraseConfirm.checked = true;
+    eraseConfirm.dispatchEvent(new Event("change"));
+
+    expect(eraseButton.disabled).toBe(false);
+  });
+
+  it("erases connected device flash after confirmation", async () => {
+    const flasher = new FakeFlasher();
+    new AppController({
+      root: document,
+      flasher,
+      serialSupported: true,
+      secureContext: true,
+    }).start();
+
+    (document.querySelector("#connectButton") as HTMLButtonElement).click();
+    await Promise.resolve();
+
+    const eraseConfirm = document.querySelector("#eraseConfirmInput") as HTMLInputElement;
+    eraseConfirm.checked = true;
+    eraseConfirm.dispatchEvent(new Event("change"));
+    (document.querySelector("#eraseButton") as HTMLButtonElement).click();
+    await waitForAsyncDomWork();
+
+    expect(flasher.erase).toHaveBeenCalledOnce();
+    expect(flasher.disconnect).toHaveBeenCalledOnce();
+    expect(document.querySelector("#stateLabel")?.textContent).toBe("Erased");
+    expect(document.querySelector("#deviceSummary")?.textContent).toBe("Not connected");
+    expect(document.querySelector("#nextStepMessage")?.textContent).toContain("Device flash erased");
+    expect(document.querySelector("#nextStepMessage")?.textContent).toContain("Reconnect");
+    expect(document.querySelector("#logOutput")?.textContent).toContain("Device flash erased");
+    expect(eraseConfirm.checked).toBe(false);
+    expect((document.querySelector("#eraseButton") as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("selects firmware and flashes at offset zero", async () => {
     const flasher = new FakeFlasher();
     new AppController({
@@ -167,11 +233,14 @@ describe("AppController", () => {
     await waitForAsyncDomWork();
 
     expect(flasher.flash).toHaveBeenCalledOnce();
+    expect(flasher.disconnect).toHaveBeenCalledOnce();
     expect(flasher.flashInput?.offset).toBe(0x0);
     expect(document.querySelector("#progressLabel")?.textContent).toBe("100%");
     expect(document.querySelector("#stateLabel")?.textContent).toBe("Success");
+    expect(document.querySelector("#deviceSummary")?.textContent).toBe("Not connected");
     expect(document.querySelector("#flashStepLabel")?.textContent).toBe("Verified");
     expect(document.querySelector("#checksumSummary")?.textContent).toBe("Verified");
+    expect((document.querySelector("#flashButton") as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("renders guided step and session defaults before connecting", () => {
@@ -235,7 +304,35 @@ describe("AppController", () => {
     expect(document.querySelector("#provisioningSummary")?.textContent).toBe(
       "kairo-dev-03 / kairo-dev-03",
     );
+    expect((document.querySelector("#provisionButton") as HTMLButtonElement).disabled).toBe(false);
     expect(document.querySelector("#logOutput")?.textContent).not.toContain("PRIVATE KEY");
+  });
+
+  it("keeps firmware flash step neutral when provisioning bundle validation fails before flashing", async () => {
+    new AppController({
+      root: document,
+      flasher: new FakeFlasher(),
+      serialSupported: true,
+      secureContext: true,
+    }).start();
+
+    const firmwareInput = document.querySelector("#firmwareInput") as HTMLInputElement;
+    setInputFile(firmwareInput, new File([new Uint8Array([1, 2, 3])], "kairo-demo.bin"));
+    firmwareInput.dispatchEvent(new Event("change"));
+    await waitForAsyncDomWork();
+
+    const provisioningInput = document.querySelector("#provisioningInput") as HTMLInputElement;
+    setInputFile(
+      provisioningInput,
+      new File([JSON.stringify({ type: "provision" })], "bad-provisioning.json"),
+    );
+    provisioningInput.dispatchEvent(new Event("change"));
+    await waitForAsyncDomWork();
+
+    expect(document.querySelector("#stateLabel")?.textContent).toBe("Idle");
+    expect(document.querySelector("#errorMessage")?.textContent).toContain("missing deviceId");
+    expect(document.querySelector("#flashStepLabel")?.textContent).toBe("Waiting");
+    expect(document.querySelector("#checksumSummary")?.textContent).toBe("Pending");
   });
 
   it("sends selected provisioning bundle after flashing succeeds", async () => {
@@ -270,11 +367,49 @@ describe("AppController", () => {
     await waitForAsyncDomWork();
 
     expect(flasher.provision).toHaveBeenCalledOnce();
+    expect(flasher.disconnect).toHaveBeenCalledTimes(2);
     expect(flasher.provisionInput?.bundleJson).toBe(JSON.stringify(VALID_PROVISIONING_BUNDLE));
-    expect(document.querySelector("#stateLabel")?.textContent).toBe("Provisioned");
+    expect(document.querySelector("#stateLabel")?.textContent).toBe("Success");
+    expect(document.querySelector("#deviceSummary")?.textContent).toBe("Not connected");
     expect(document.querySelector("#sendProvisioningStepLabel")?.textContent).toBe("Done");
     expect(document.querySelector("#runtimeSummary")?.textContent).toBe("Reboot required");
     expect(document.querySelector("#nextStepMessage")?.textContent).toContain("Restart or reset");
+  });
+
+  it("sends selected provisioning bundle without flashing firmware first", async () => {
+    const flasher = new FakeFlasher();
+    new AppController({
+      root: document,
+      flasher,
+      serialSupported: true,
+      secureContext: true,
+    }).start();
+
+    const provisioningInput = document.querySelector("#provisioningInput") as HTMLInputElement;
+    setInputFile(
+      provisioningInput,
+      new File([JSON.stringify(VALID_PROVISIONING_BUNDLE, null, 2)], "kairo-dev-03.json"),
+    );
+    provisioningInput.dispatchEvent(new Event("change"));
+    await waitForAsyncDomWork();
+
+    const provisionButton = document.querySelector("#provisionButton") as HTMLButtonElement;
+    expect(provisionButton.disabled).toBe(false);
+
+    provisionButton.click();
+    expect(document.querySelector("#stateLabel")?.textContent).toBe("Idle");
+    expect(document.querySelector("#flashStepLabel")?.textContent).toBe("Waiting");
+    expect(document.querySelector("#checksumSummary")?.textContent).toBe("Waiting");
+    await waitForAsyncDomWork();
+
+    expect(flasher.flash).not.toHaveBeenCalled();
+    expect(flasher.provision).toHaveBeenCalledOnce();
+    expect(flasher.disconnect).toHaveBeenCalledOnce();
+    expect(flasher.provisionInput?.bundleJson).toBe(JSON.stringify(VALID_PROVISIONING_BUNDLE));
+    expect(document.querySelector("#stateLabel")?.textContent).toBe("Idle");
+    expect(document.querySelector("#flashStepLabel")?.textContent).toBe("Waiting");
+    expect(document.querySelector("#checksumSummary")?.textContent).toBe("Waiting");
+    expect(document.querySelector("#runtimeSummary")?.textContent).toBe("Reboot required");
   });
 
   it("redacts private keys from logs and provisioning errors", async () => {
@@ -317,7 +452,7 @@ describe("AppController", () => {
     expect(document.querySelector("#logOutput")?.textContent).toContain("[private key redacted]");
   });
 
-  it("changes the flash button to Flash again after success and allows another flash", async () => {
+  it("requires reconnecting before flashing again after success", async () => {
     const flasher = new FakeFlasher();
     new AppController({
       root: document,
@@ -339,12 +474,18 @@ describe("AppController", () => {
     await waitForAsyncDomWork();
 
     expect(flashButton.textContent).toBe("Flash again");
+    expect(flashButton.disabled).toBe(true);
+    expect(document.querySelector("#deviceSummary")?.textContent).toBe("Not connected");
+
+    (document.querySelector("#connectButton") as HTMLButtonElement).click();
+    await Promise.resolve();
     expect(flashButton.disabled).toBe(false);
 
     flashButton.click();
     await waitForAsyncDomWork();
 
     expect(flasher.flash).toHaveBeenCalledTimes(2);
+    expect(flasher.disconnect).toHaveBeenCalledTimes(2);
   });
 
   it("changes the flash button to Try again after a flash failure", async () => {
@@ -370,8 +511,9 @@ describe("AppController", () => {
     await waitForAsyncDomWork();
 
     expect(document.querySelector("#stateLabel")?.textContent).toBe("Failed");
-    expect(flashButton.textContent).toBe("Try again");
-    expect(flashButton.disabled).toBe(false);
+    expect(document.querySelector("#deviceSummary")?.textContent).toBe("Not connected");
+    expect(flashButton.textContent).toBe("Flash");
+    expect(flashButton.disabled).toBe(true);
     expect((document.querySelector("#connectButton") as HTMLButtonElement).disabled).toBe(false);
   });
 });

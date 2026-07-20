@@ -11,6 +11,7 @@ export type AppErrorCode =
   | "port-selection-cancelled"
   | "serial-connection-failed"
   | "bootloader-unavailable"
+  | "erase-failed"
   | "flash-failed"
   | "provisioning-timeout"
   | "provisioning-failed"
@@ -35,6 +36,8 @@ const ERROR_MESSAGES: Record<AppErrorCode, string> = {
     "Could not connect to the device. Check the USB cable, reconnect the board, and try again.",
   "bootloader-unavailable":
     "Could not enter the device bootloader. Hold the boot button while connecting, then try again.",
+  "erase-failed":
+    "Erase failed. Check the USB connection, make sure the device is in flashing mode, and try again.",
   "flash-failed":
     "Flashing failed. Check the USB connection, make sure the device is in flashing mode, and try again.",
   "provisioning-timeout":
@@ -60,6 +63,10 @@ export function codeFromUnknownError(error: unknown): AppErrorCode {
 
     if (message.includes("bootloader") || message.includes("sync")) {
       return "bootloader-unavailable";
+    }
+
+    if (message.includes("erase")) {
+      return "erase-failed";
     }
 
     if (message.includes("serial") || message.includes("port")) {

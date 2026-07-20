@@ -355,11 +355,29 @@ button svg,
   align-items: stretch;
 }
 
+.connection-panel,
+.danger-panel,
 .summary-panel,
 .log-section {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+}
+
+.connection-panel {
+  grid-column: 1 / -1;
+  overflow: hidden;
+}
+
+.danger-panel {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  border-color: #efb9c3;
+}
+
+.danger-heading {
+  color: var(--danger);
+  background: #fff7f8;
 }
 
 .workflow-column {
@@ -452,6 +470,46 @@ button svg,
   min-height: 118px;
   padding: 18px;
   border-bottom: 1px solid var(--line);
+}
+
+.connection-row {
+  min-height: 96px;
+  border-bottom: 0;
+}
+
+.danger-row {
+  min-height: 116px;
+  border-bottom: 0;
+}
+
+.danger-icon {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.danger-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #3b4656;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.danger-confirm input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--danger);
+}
+
+.danger-action {
+  min-width: 146px;
+  border-color: #8f1b2f;
+  background: var(--danger);
+}
+
+.danger-action:hover:not(:disabled) {
+  background: #86192b;
 }
 
 .workflow-row:last-child {

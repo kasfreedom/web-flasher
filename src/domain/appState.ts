@@ -1,10 +1,20 @@
 import type { AppErrorCode } from "./errors";
 
+const FLASH_RETRY_ERROR_CODES = new Set<AppErrorCode>([
+  "empty-firmware",
+  "invalid-firmware-extension",
+  "missing-firmware",
+  "flash-failed",
+  "reset-failed",
+]);
+
 export type AppStatus =
   | "unsupported"
   | "idle"
   | "connecting"
   | "connected"
+  | "erasing"
+  | "erased"
   | "flashing"
   | "provisioning"
   | "provisioned"
@@ -48,6 +58,9 @@ export type AppAction =
   | { type: "provisioning-cleared" }
   | { type: "connecting" }
   | { type: "connected"; chipName: string }
+  | { type: "device-released" }
+  | { type: "erase-started" }
+  | { type: "erase-success" }
   | { type: "flash-started" }
   | { type: "flash-progress"; percentage: number }
   | { type: "provisioning-started" }
@@ -141,6 +154,34 @@ export function reducer(state: AppState, action: AppAction): AppState {
         errorCode: null,
         errorDetail: null,
       };
+    case "device-released":
+      return {
+        ...state,
+        chipName: null,
+      };
+    case "erase-started":
+      return {
+        ...state,
+        status: "erasing",
+        firmwareFlashed: false,
+        progressPercentage: 0,
+        rebootRequired: null,
+        errorCode: null,
+        errorDetail: null,
+        nextStep: null,
+      };
+    case "erase-success":
+      return {
+        ...state,
+        status: "erased",
+        chipName: null,
+        firmwareFlashed: false,
+        progressPercentage: 0,
+        rebootRequired: null,
+        errorCode: null,
+        errorDetail: null,
+        nextStep: "Device flash erased. Reconnect the device before flashing.",
+      };
     case "flash-started":
       return {
         ...state,
@@ -168,6 +209,7 @@ export function reducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         status: "provisioned",
+        chipName: null,
         errorCode: null,
         errorDetail: null,
         rebootRequired: action.rebootRequired,
@@ -184,11 +226,13 @@ export function reducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         status: "success",
+        chipName: null,
         firmwareFlashed: true,
         progressPercentage: 100,
         errorCode: null,
         errorDetail: null,
-        nextStep: "Firmware flashed. Select a provisioning bundle, then send provisioning.",
+        nextStep:
+          "Firmware flashed. Let the device boot, then send provisioning to the running firmware.",
       };
     case "failed":
       return {
@@ -206,6 +250,7 @@ export function selectCanConnect(state: AppState): boolean {
   return (
     state.status !== "unsupported" &&
     state.status !== "connecting" &&
+    state.status !== "erasing" &&
     state.status !== "flashing" &&
     state.status !== "provisioning"
   );
@@ -216,6 +261,18 @@ export function selectCanFlash(state: AppState): boolean {
     state.firmware !== null &&
     state.chipName !== null &&
     state.status !== "flashing" &&
+    state.status !== "erasing" &&
+    state.status !== "provisioning" &&
+    state.status !== "unsupported" &&
+    state.status !== "connecting"
+  );
+}
+
+export function selectCanErase(state: AppState): boolean {
+  return (
+    state.chipName !== null &&
+    state.status !== "erasing" &&
+    state.status !== "flashing" &&
     state.status !== "provisioning" &&
     state.status !== "unsupported" &&
     state.status !== "connecting"
@@ -225,8 +282,7 @@ export function selectCanFlash(state: AppState): boolean {
 export function selectCanProvision(state: AppState): boolean {
   return (
     state.provisioning !== null &&
-    state.chipName !== null &&
-    state.firmwareFlashed &&
+    state.status !== "erasing" &&
     state.status !== "flashing" &&
     state.status !== "provisioning" &&
     state.status !== "unsupported" &&
@@ -241,10 +297,27 @@ export function selectFlashButtonLabel(state: AppState): string {
     case "success":
       return "Flash again";
     case "failed":
-      return state.chipName === null ? "Flash" : "Try again";
+      return state.chipName !== null && isFlashRetryError(state.errorCode) ? "Try again" : "Flash";
     default:
       return "Flash";
   }
+}
+
+export function selectEraseButtonLabel(state: AppState): string {
+  switch (state.status) {
+    case "erasing":
+      return "Erasing...";
+    case "erased":
+      return "Erase again";
+    case "failed":
+      return state.errorCode === "erase-failed" ? "Try erase again" : "Erase device";
+    default:
+      return "Erase device";
+  }
+}
+
+function isFlashRetryError(errorCode: AppErrorCode | null): boolean {
+  return errorCode !== null && FLASH_RETRY_ERROR_CODES.has(errorCode);
 }
 
 export function selectProvisionButtonLabel(state: AppState): string {
@@ -254,7 +327,7 @@ export function selectProvisionButtonLabel(state: AppState): string {
     case "provisioned":
       return "Send again";
     case "failed":
-      return state.firmwareFlashed ? "Try provisioning again" : "Send provisioning";
+      return state.provisioning ? "Try provisioning again" : "Send provisioning";
     default:
       return "Send provisioning";
   }
